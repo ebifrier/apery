@@ -6,6 +6,12 @@
 #include "piece.hpp"
 #include "position.hpp"
 
+#if defined(_MSC_VER)
+// 複数のコンストラクタ、代入演算子があるという警告を消す。
+#pragma warning(push)
+#pragma warning(disable : 4521 4522)
+#endif
+
 // xxxxxxxx xxxxxxxx xxxxxxxx x1111111  移動先
 // xxxxxxxx xxxxxxxx xx111111 1xxxxxxx  移動元。駒打ちの際には、PieceType + SquareNum - 1
 // xxxxxxxx xxxxxxxx x1xxxxxx xxxxxxxx  1 なら成り
@@ -18,13 +24,14 @@ class Move {
 public:
 	Move() {}
 	explicit Move(const u32 u) : value_(u) {}
+    Move(const Move& m) : value_(m.value_) {}
+    Move(const volatile Move& m) : value_(m.value_) {}
+
 	Move& operator = (const Move& m) { value_ = m.value_; return *this; }
 	Move& operator = (const volatile Move& m) { value_ = m.value_; return *this; }
 	// volatile Move& 型の *this を返すとなぜか警告が出るので、const Move& 型の m を返すことにする。
 	const Move& operator = (const Move& m) volatile { value_ = m.value_; return m; }
-	Move(const Move& m) { value_ = m.value_; }
-	Move(const volatile Move& m) { value_ = m.value_; }
-
+	
 	// 移動先
 	Square to() const { return static_cast<Square>((value() >> 0) & 0x7f); }
 	// 移動元
@@ -198,5 +205,9 @@ inline Move move16toMove(const Move move, const Position& pos) {
 	const PieceType ptFrom = pieceToPieceType(pos.piece(from));
 	return move | pieceType2Move(ptFrom) | capturedPieceType2Move(move.to(), pos);
 }
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif // #ifndef APERY_MOVE_HPP

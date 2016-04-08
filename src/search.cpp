@@ -14,7 +14,7 @@ FORCE_INLINE void ThreadPool::wakeUp(Searcher* s) {
 	for (size_t i = 0; i < size(); ++i) {
 		(*this)[i]->maxPly = 0;
 	}
-	sleepWhileIdle_ = s->options["Use_Sleeping_Threads"];
+	sleepWhileIdle_ = (s->options["Use_Sleeping_Threads"] != 0);
 }
 // 一箇所でしか呼ばないので、FORCE_INLINE
 FORCE_INLINE void ThreadPool::sleep() {
@@ -1579,8 +1579,8 @@ void Searcher::think() {
 	tt.setSize(options["USI_Hash"]); // operator int() 呼び出し。
 
 	SYNCCOUT << "info string book_ply " << book_ply << SYNCENDL;
-	if (options["OwnBook"] && pos.gamePly() <= book_ply) {
-		const std::tuple<Move, Score> bookMoveScore = book.probe(pos, options["Book_File"], options["Best_Book_Move"]);
+	if (options["OwnBook"] != 0 && pos.gamePly() <= book_ply) {
+		const std::tuple<Move, Score> bookMoveScore = book.probe(pos, options["Book_File"], options["Best_Book_Move"] != 0);
 		if (!std::get<0>(bookMoveScore).isNone() && std::find(rootMoves.begin(),
 															  rootMoves.end(),
 															  std::get<0>(bookMoveScore)) != rootMoves.end())

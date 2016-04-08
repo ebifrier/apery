@@ -25,7 +25,7 @@ Thread::Thread(Searcher* s) /*: splitPoints()*/ {
 	maxPly = 0;
 	activeSplitPoint = nullptr;
 	activePosition = nullptr;
-	idx = s->threads.size();
+	idx = static_cast<int>(s->threads.size());
 }
 
 void TimerThread::idleLoop() {

@@ -139,14 +139,14 @@ extern KPPBoardIndexStartToPiece g_kppBoardIndexStartToPiece;
 
 template <typename Tl, typename Tr>
 inline std::array<Tl, 2> operator += (std::array<Tl, 2>& lhs, const std::array<Tr, 2>& rhs) {
-	lhs[0] += rhs[0];
-	lhs[1] += rhs[1];
+	lhs[0] += static_cast<Tl>(rhs[0]);
+	lhs[1] += static_cast<Tl>(rhs[1]);
 	return lhs;
 }
 template <typename Tl, typename Tr>
 inline std::array<Tl, 2> operator -= (std::array<Tl, 2>& lhs, const std::array<Tr, 2>& rhs) {
-	lhs[0] -= rhs[0];
-	lhs[1] -= rhs[1];
+	lhs[0] -= static_cast<Tl>(rhs[0]);
+	lhs[1] -= static_cast<Tl>(rhs[1]);
 	return lhs;
 }
 
@@ -1043,8 +1043,8 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 					kkIndices(indices, static_cast<Square>(ksq0), ksq1);
 					std::array<s64, 2> sum = {{}};
 					FOO(indices, oneArrayKK, sum);
-					KK[ksq0][ksq1][0] += sum[0] / 2;
-					KK[ksq0][ksq1][1] += sum[1] / 2;
+					KK[ksq0][ksq1][0] += static_cast<s32>(sum[0] / 2);
+					KK[ksq0][ksq1][1] += static_cast<s32>(sum[1] / 2);
 #if defined USE_K_FIX_OFFSET
 					KK[ksq0][ksq1][0] += K_Fix_Offset[ksq0] - K_Fix_Offset[inverse(ksq1)];
 #endif

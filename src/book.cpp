@@ -130,7 +130,7 @@ std::tuple<Move, Score> Book::probe(const Position& pos, const std::string& fNam
 			else {
 				const Square from = tmp.from();
 				const PieceType ptFrom = pieceToPieceType(pos.piece(from));
-				const bool promo = tmp.isPromotion();
+				const bool promo = (tmp.isPromotion() != 0);
 				if (promo) {
 					move = makeCapturePromoteMove(ptFrom, from, to, pos);
 				}

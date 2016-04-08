@@ -6,13 +6,13 @@
 namespace {
 #if 1
 	const int MoveHorizon = 47; // 15分切れ負け用。
-	const float MaxRatio = 3.0; // 15分切れ負け用。
-	//const float MaxRatio = 5.0; // 15分 秒読み10秒用。
+	const float MaxRatio = 3.0f; // 15分切れ負け用。
+	//const float MaxRatio = 5.0f; // 15分 秒読み10秒用。
 #else
 	const int MoveHorizon = 35; // 2時間切れ負け用。(todo: もう少し時間使っても良いかも知れない。)
-	const float MaxRatio = 5.0; // 2時間切れ負け用。
+	const float MaxRatio = 5.0f; // 2時間切れ負け用。
 #endif
-	const float StealRatio = 0.33;
+	const float StealRatio = 0.33f;
 
 	// Stockfish とは異なる。
 	const int MoveImportance[512] = {
@@ -63,7 +63,7 @@ namespace {
 		const float TMaxRatio   = (T == OptimumTime ? 1 : MaxRatio);
 		const float TStealRatio = (T == OptimumTime ? 0 : StealRatio);
 
-		const float thisMoveImportance = moveImportance(currentPly) * slowMover / 100;
+		const float thisMoveImportance = moveImportance(currentPly) * slowMover / 100.0f;
 		float otherMoveImportance = 0;
 
 		for (int i = 1; i < movesToGo; ++i) {
