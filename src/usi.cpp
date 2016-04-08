@@ -1,4 +1,4 @@
-#include "usi.hpp"
+﻿#include "usi.hpp"
 #include "position.hpp"
 #include "move.hpp"
 #include "movePicker.hpp"

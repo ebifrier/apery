@@ -1,4 +1,4 @@
-#ifndef APERY_EVALUATE_HPP
+﻿#ifndef APERY_EVALUATE_HPP
 #define APERY_EVALUATE_HPP
 
 #include "overloadEnumOperators.hpp"
