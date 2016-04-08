@@ -82,6 +82,10 @@ public:
 	Position& operator = (const Position& pos);
 	void set(const std::string& sfen, Thread* th);
 
+#if defined GODWHALE_CLUSTER_SLAVE
+    int id;
+#endif
+
 	Bitboard bbOf(const PieceType pt) const                                            { return byTypeBB_[pt]; }
 	Bitboard bbOf(const Color c) const                                                 { return byColorBB_[c]; }
 	Bitboard bbOf(const PieceType pt, const Color c) const                             { return bbOf(pt) & bbOf(c); }

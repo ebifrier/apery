@@ -322,9 +322,20 @@ Move csaToMove(const Position& pos, const std::string& moveStr) {
 	return move;
 }
 
-void setPosition(Position& pos, std::istringstream& ssCmd) {
+void setPosition(Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+                 , bool isRSI /*= false*/
+#endif
+    ) {
 	std::string token;
 	std::string sfen;
+
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::string id;
+    if (isRSI) {
+        ssCmd >> id;
+    }
+#endif
 
 	ssCmd >> token;
 
@@ -343,6 +354,13 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
 
 	pos.set(sfen, pos.searcher()->threads.mainThread());
 	pos.searcher()->setUpStates = StateStackPtr(new std::stack<StateInfo>());
+
+    // IDはsetが終わった後に設定しないと0クリアされてしまう
+#if defined GODWHALE_CLUSTER_SLAVE
+    if (!id.empty()) {
+        pos.id = std::stoi(id);
+    }
+#endif
 
 	Ply currentPly = pos.gamePly();
 	while (ssCmd >> token) {
