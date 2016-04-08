@@ -4,6 +4,11 @@
 #include "common.hpp"
 #include "move.hpp"
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+extern const int LoginNameMaxLength;
+#endif
+
+extern const std::string MyName;
 const std::string DefaultStartPositionSFEN = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
 
 struct OptionsMap;

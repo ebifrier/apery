@@ -423,7 +423,10 @@ void measureGenerateMoves(const Position& pos) {
 }
 #endif
 
-#ifdef NDEBUG
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+const std::string MyName = "Godwhale_Apery-3.0.0";
+const int LoginNameMaxLength = 12;
+#elif defined(NDEBUG)
 const std::string MyName = "Apery_Twig_SDT3";
 #else
 const std::string MyName = "Apery Debug Build";
