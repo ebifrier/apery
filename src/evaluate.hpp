@@ -536,8 +536,12 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 							Rank diff_rank_kjto = krank - makeRank(jto_tmp);
 							std::tuple<Color, File, Rank> ituple = std::make_tuple(icolor, diff_file_kito, diff_rank_kito);
 							std::tuple<Color, File, Rank> jtuple = std::make_tuple(jcolor, diff_file_kjto, diff_rank_kjto);
-							if (jtuple < ituple)
-								std::swap(ituple, jtuple);
+                            if (jtuple < ituple) {
+                                auto tmp = jtuple;
+                                jtuple = ituple;
+                                ituple = tmp;
+                                //std::swap(ituple, jtuple);
+                            }
 #if defined EVAL_PHASE1
 							ret[retIdx++] = std::make_pair(&kpps.r_kee[std::get<0>(ituple)][R_Mid + std::get<1>(ituple)][R_Mid + std::get<2>(ituple)][std::get<0>(jtuple)][R_Mid + std::get<1>(jtuple)][R_Mid + std::get<2>(jtuple)] - oneArrayKPP(0), MaxWeight() >> (distance+6));
 #endif
