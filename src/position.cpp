@@ -255,7 +255,13 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 		handKey -= zobHand(hpTo, us);
 		boardKey += zobrist(ptTo, to, us);
 
-		prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#if defined(GODWHALE_CLUSTER_MASTER)
+        if (csearcher() != nullptr) {
+            prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+        }
+#else
+        prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#endif
 
 		const int handnum = hand(us).numOf(hpTo);
 		const int listIndex = evalList_.squareHandToList[HandPieceToSquareHand[us][hpTo] + handnum];
@@ -329,7 +335,13 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
 			st_->material += (us == Black ? capturePieceScore(ptCaptured) : -capturePieceScore(ptCaptured));
 		}
-		prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#if defined(GODWHALE_CLUSTER_MASTER)
+        if (csearcher() != nullptr) {
+            prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+        }
+#else
+        prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#endif
 		// Occupied は to, from の位置のビットを操作するよりも、
 		// Black と White の or を取る方が速いはず。
 		byTypeBB_[Occupied] = bbOf(Black) | bbOf(White);
