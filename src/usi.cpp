@@ -357,7 +357,11 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 		ssCmd >> token; // "moves" が入力されるはず。
 	}
 	else if (token == "sfen") {
-		while (ssCmd >> token && token != "moves") {
+		while (ssCmd >> token && token != "moves"
+#if defined GODWHALE_CLUSTER_SLAVE
+               && (isRSI && token != "brunch")
+#endif
+            ) {
 			sfen += token + " ";
 		}
 	}
@@ -520,6 +524,7 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
 		else if (token == "position" ) { setPosition(pos, ssCmd); }
 #if defined GODWHALE_CLUSTER_SLAVE
         else if (token == "xposition") { setPosition(pos, ssCmd, true); }
+        else if (token == "xinfo")     { /* GUI用のコマンド。ここでは何もしない*/ }
         else if (token == "keepalive") { SYNCCOUT << "keepalive ok" << SYNCENDL; }
 #endif
 		else if (token == "setoption") { setOption(ssCmd); }
