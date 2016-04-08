@@ -35,15 +35,55 @@ int main() {
 }
 
 #else
+#if defined GODWHALE_CLUSTER_SLAVE
+void validateLoginName(const std::string name) {
+    if (name.empty()) {
+        std::cerr << "The Login_Name is empty !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (name.length() > LoginNameMaxLength) {
+        std::cerr << "The Login_Name is too long !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (!std::all_of(name.begin(), name.end(), [](char _) { return (isalnum(_) || _ == '_'); })) {
+        std::cerr << "The Login_Name '" << name << "' has invalid character !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+#endif
+
 // 将棋を指すソフト
 int main(int argc, char* argv[]) {
-	initTable();
-	Position::initZobrist();
-	auto s = std::unique_ptr<Searcher>(new Searcher);
-	s->init();
-	// 一時オブジェクトの生成と破棄
-	std::unique_ptr<Evaluater>(new Evaluater)->init(s->options["Eval_Dir"], true);
-	s->doUSICommandLoop(argc, argv);
+#if defined(GODWHALE_CLUSTER_SLAVE)
+    if (argc < 4) {
+        std::cerr << argv[0] << " host port name [threads]" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    validateLoginName(argv[3]);
+#endif
+
+    initTable();
+    Position::initZobrist();
+    auto s = std::unique_ptr<Searcher>(new Searcher);
+    s->init();
+    // 一時オブジェクトの生成と破棄
+    std::unique_ptr<Evaluater>(new Evaluater)->init(s->options["Eval_Dir"], true);
+
+#if defined(GODWHALE_CLUSTER_SLAVE)
+    s->options["Login_Name"] = USIOption(argv[3]);
+    if (argc > 4) {
+        s->options["Threads"] = std::stoi(argv[4]);
+    }
+
+    startGodwhaleIo(argv[1], argv[2]);
+    s->doUSICommandLoop(1, argv);
+    closeGodwhaleIo();
+#else
+    s->doUSICommandLoop(argc, argv);
+#endif
 	s->threads.exit();
 }
 
