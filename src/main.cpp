@@ -7,6 +7,10 @@
 #include "tt.hpp"
 #include "search.hpp"
 
+#if defined(GODWHALE_CLUSTER_SLAVE)
+#include "godwhaleIo.hpp"
+#endif
+
 #if defined FIND_MAGIC
 // Magic Bitboard の Magic Number を求める為のソフト
 int main() {
