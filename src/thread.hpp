@@ -111,7 +111,11 @@ public:
 	void setTimer(const int msec);
 	void waitForThinkFinished();
 	void startThinking(const Position& pos, const LimitsType& limits,
-					   const std::vector<Move>& searchMoves);
+					   const std::vector<Move>& searchMoves
+#if defined(GODWHALE_CLUSTER_SLAVE)
+                       , const std::vector<Move>& ignoreMoves
+#endif
+                       );
 
 	bool sleepWhileIdle_;
 	size_t maxThreadsPerSplitPoint_;

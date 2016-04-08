@@ -160,6 +160,9 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 	LimitsType limits;
 	std::vector<Move> moves;
 	std::string token;
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::vector<Move> ignoreMoves;
+#endif
 
 	while (ssCmd >> token) {
 		if      (token == "ponder"     ) { limits.ponder = true; }
@@ -177,9 +180,19 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 			while (ssCmd >> token)
 				moves.push_back(usiToMove(pos, token));
 		}
+#if defined GODWHALE_CLUSTER_SLAVE
+        else if (token == "ignoremoves") {
+            while (ssCmd >> token)
+                ignoreMoves.push_back(usiToMove(pos, token));
+        }
+#endif
 	}
 	pos.searcher()->searchMoves = moves;
-	pos.searcher()->threads.startThinking(pos, limits, moves);
+	pos.searcher()->threads.startThinking(pos, limits, moves
+#if defined GODWHALE_CLUSTER_SLAVE
+                                          , ignoreMoves
+#endif
+                                          );
 }
 
 #if defined LEARN
@@ -505,6 +518,10 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
 		else if (token == "go"       ) { go(pos, ssCmd); }
 		else if (token == "isready"  ) { SYNCCOUT << "readyok" << SYNCENDL; }
 		else if (token == "position" ) { setPosition(pos, ssCmd); }
+#if defined GODWHALE_CLUSTER_SLAVE
+        else if (token == "xposition") { setPosition(pos, ssCmd, true); }
+        else if (token == "keepalive") { SYNCCOUT << "keepalive ok" << SYNCENDL; }
+#endif
 		else if (token == "setoption") { setOption(ssCmd); }
 #if defined LEARN
 		else if (token == "l"        ) {
