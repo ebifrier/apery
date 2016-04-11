@@ -58,33 +58,47 @@ void validateLoginName(const std::string name) {
 int main(int argc, char* argv[]) {
 #if defined(GODWHALE_CLUSTER_SLAVE)
     if (argc < 4) {
-        std::cerr << argv[0] << " host port name [threads]" << std::endl;
+        std::cerr << argv[0] << " host port name [threads] [evalkey]" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     validateLoginName(argv[3]);
 #endif
 
-    initTable();
-    Position::initZobrist();
-    auto s = std::unique_ptr<Searcher>(new Searcher);
-    s->init();
-    // 一時オブジェクトの生成と破棄
-    std::unique_ptr<Evaluater>(new Evaluater)->init(s->options["Eval_Dir"], true);
+    std::unique_ptr<Searcher> s;
+    std::unique_ptr<Evaluater> e;
+    try {
+        initTable();
+        Position::initZobrist();
+        s.reset(new Searcher);
+        s->init();
+        // 一時オブジェクトの生成と破棄
+        e.reset(new Evaluater);
 
 #if defined(GODWHALE_CLUSTER_SLAVE)
-    s->options["Login_Name"] = USIOption(argv[3]);
-    if (argc > 4) {
-        s->options["Threads"] = std::stoi(argv[4]);
+        s->options["Login_Name"] = USIOption(argv[3]);
+        if (argc > 4) {
+            s->options["Threads"] = std::stoi(argv[4]);
+        }
+        if (argc > 5) {
+            e->EvalMemKey = argv[5];
+        }
+        e->init(s->options["Eval_Dir"], true);
+
+        startGodwhaleIo(argv[1], argv[2]);
+        s->doUSICommandLoop(1, argv);
+        closeGodwhaleIo();
+#else
+        e->init(s->options["Eval_Dir"], true);
+        s->doUSICommandLoop(argc, argv);
+#endif
+    }
+    catch (std::exception &ex) {
+        std::cerr << "unhandled exception: " << ex.what() << std::endl;
     }
 
-    startGodwhaleIo(argv[1], argv[2]);
-    s->doUSICommandLoop(1, argv);
-    closeGodwhaleIo();
-#else
-    s->doUSICommandLoop(argc, argv);
-#endif
-	s->threads.exit();
+    if (s != nullptr) s->threads.exit();
+    if (e != nullptr) e->quit();
 }
 
 #endif

@@ -61,12 +61,6 @@ const int KPPIndexArray[] = {
 	f_dragon, e_dragon, fe_end
 };
 
-#if defined USE_KPP2
-#define KPP2Index(i,j) ((i)*((i)+1)/2+(j))
-enum { pos_n = fe_end * (fe_end + 1) / 2 };
-typedef std::array<s16, 2> KPP2Entry[pos_n];
-#endif
-
 inline Square kppIndexToSquare(const int i) {
 	const auto it = std::upper_bound(std::begin(KPPIndexArray), std::end(KPPIndexArray), i);
 	return static_cast<Square>(i - *(it - 1));
@@ -821,13 +815,19 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 
 struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, std::array<s32, 2> > {
 	// 探索時に参照する評価関数テーブル
-	static std::array<s16, 2> KPP[SquareNum][fe_end][fe_end];
+#if defined USE_KPP2
+	static std::string EvalMemKey;
+	static std::array<s16, 2> (*Evaluater::KPP)[fe_end][fe_end];
+#else
+	static std::array<s16, 2> Evaluater::KPP[SquareNum][fe_end][fe_end];
+#endif
 	static std::array<s32, 2> KKP[SquareNum][SquareNum][fe_end];
 	static std::array<s32, 2> KK[SquareNum][SquareNum];
 #if defined USE_K_FIX_OFFSET
 	static const s32 K_Fix_Offset[SquareNum];
 #endif
 
+	void quit();
 	void clear() { memset(this, 0, sizeof(*this)); }
 	static std::string addSlashIfNone(const std::string& str) {
 		std::string ret = str;
@@ -854,84 +854,8 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 		FOO(KKP);												\
 		FOO(KK);												\
 	}
-	static bool readSynthesized(const std::string& dirName) {
-        {
-//#define TEST_KPP2
-#if !defined USE_KPP2 || defined TEST_KPP2
-            std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized.bin").c_str(), std::ios::binary);
-            if (ifs) ifs.read(reinterpret_cast<char*>(KPP), sizeof(KPP));
-            else     return false;
-#endif
-        }
-        {
-#if defined USE_KPP2
-            std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
-            if (!ifs) return false;
-
-            KPP2Entry* KPP2 = new KPP2Entry[SquareNum];
-            //size_t size = SquareNum * pos_n;
-            ifs.read(reinterpret_cast<char*>(KPP2), sizeof(KPP2Entry) * (int)SquareNum);
-            ifs.close();
-
-            for (int sq = 0; sq < SquareNum; ++sq) {
-                for (int i = 0; i < fe_end; ++i) {
-                    for (int j = 0; j <= i; ++j) {
-                        auto value = KPP2[sq][KPP2Index(i, j)];
-#if defined TEST_KPP2
-                        if (value != KPP[sq][i][j] || value != KPP[sq][j][i]) {
-                            std::cout << "the value of KPP2 is wrong." << std::endl;
-                        }
-#endif
-                        KPP[sq][i][j] = value;
-                        KPP[sq][j][i] = value;
-                    }
-                }
-            }
-
-            delete[] KPP2;
-#endif
-        }
-        {
-            std::ifstream ifs((addSlashIfNone(dirName) + "KKP_synthesized.bin").c_str(), std::ios::binary);
-            if (ifs) ifs.read(reinterpret_cast<char*>(KKP), sizeof(KKP));
-            else     return false;
-        }
-        {
-            std::ifstream ifs((addSlashIfNone(dirName) + "KK_synthesized.bin").c_str(), std::ios::binary);
-            if (ifs) ifs.read(reinterpret_cast<char*>(KK), sizeof(KK));
-            else     return false;
-        }
-		return true;
-	}
-	static void writeSynthesized(const std::string& dirName) {
-        {
-#if !defined USE_KPP2
-            std::ofstream ofs((addSlashIfNone(dirName) + "KPP_synthesized.bin").c_str(), std::ios::binary);
-            ofs.write(reinterpret_cast<char*>(KPP), sizeof(KPP));
-#else
-            KPP2Entry* KPP2 = new KPP2Entry[SquareNum];
-            for (int sq = 0; sq < SquareNum; ++sq) {
-                for (int i = 0; i < fe_end; ++i) {
-                    for (int j = 0; j <= i; ++j) {
-                        KPP2[sq][KPP2Index(i, j)] = KPP[sq][i][j];
-                    }
-                }
-            }
-
-            std::ofstream ofs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
-			ofs.write(reinterpret_cast<char*>(KPP2), sizeof(KPP2Entry) * (int)SquareNum);
-            delete[] KPP2;
-#endif
-		}
-        {
-            std::ofstream ofs((addSlashIfNone(dirName) + "KKP_synthesized.bin").c_str(), std::ios::binary);
-            ofs.write(reinterpret_cast<char*>(KKP), sizeof(KKP));
-        }
-        {
-            std::ofstream ofs((addSlashIfNone(dirName) + "KK_synthesized.bin").c_str(), std::ios::binary);
-            ofs.write(reinterpret_cast<char*>(KK), sizeof(KK));
-        }
-	}
+	static bool readSynthesized(const std::string& dirName);
+	static void writeSynthesized(const std::string& dirName);
 	static void readSomeSynthesized(const std::string& dirName) {
 #define FOO(x) {														\
 			std::ifstream ifs((addSlashIfNone(dirName) + #x "_some_synthesized.bin").c_str(), std::ios::binary); \
