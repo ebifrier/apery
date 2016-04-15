@@ -397,7 +397,16 @@ namespace {
 	}
 }
 
-void Evaluater::quit() {
+void Evaluater::initKPP() {
+#if defined USE_KPP2
+    finiKPP();
+
+    KPP = new KPPEntry[SquareNum];
+    KPPDeleteNeeded = true;
+#endif
+}
+
+void Evaluater::finiKPP() {
 #if defined USE_KPP2
     if (KPP != nullptr) {
         if (KPPDeleteNeeded) {

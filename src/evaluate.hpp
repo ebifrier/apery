@@ -826,7 +826,9 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 	static const s32 K_Fix_Offset[SquareNum];
 #endif
 
-	void quit();
+    void initKPP();
+	void finiKPP();
+
 	void clear() { memset(this, 0, sizeof(*this)); }
 	static std::string addSlashIfNone(const std::string& str) {
 		std::string ret = str;
@@ -843,6 +845,7 @@ struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, 
 				return;
 		}
 		clear();
+        initKPP();
 		readSomeSynthesized(dirName);
 		read(dirName);
 		setEvaluate();
