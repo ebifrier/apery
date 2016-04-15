@@ -816,7 +816,6 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluaterB
 struct Evaluater : public EvaluaterBase<std::array<s16, 2>, std::array<s32, 2>, std::array<s32, 2> > {
 	// 探索時に参照する評価関数テーブル
 #if defined USE_KPP2
-	static std::string EvalMemKey;
 	static std::array<s16, 2> (*Evaluater::KPP)[fe_end][fe_end];
 #else
 	static std::array<s16, 2> Evaluater::KPP[SquareNum][fe_end][fe_end];

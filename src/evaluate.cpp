@@ -4,13 +4,13 @@
 #include "thread.hpp"
 
 #if defined USE_KPP2
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #endif
 
 KPPBoardIndexStartToPiece g_kppBoardIndexStartToPiece;
 
 #if defined USE_KPP2
-std::string Evaluater::EvalMemKey;
 std::array<s16, 2> (*Evaluater::KPP)[fe_end][fe_end];
 #else
 std::array<s16, 2> Evaluater::KPP[SquareNum][fe_end][fe_end];
@@ -25,8 +25,9 @@ typedef std::array<s16, 2> KPP2Entry[pos_n];
 typedef std::array<s16, 2> KPPEntry[fe_end][fe_end];
 
 namespace ipc = boost::interprocess;
-static ipc::shared_memory_object SharedMem;
-static ipc::mapped_region SharedRegion;
+static ipc::file_mapping MappedFile;
+static ipc::mapped_region MappedRegion;
+static bool KPPDeleteNeeded = false;
 #endif
 
 #if defined USE_K_FIX_OFFSET
@@ -398,14 +399,11 @@ namespace {
 
 void Evaluater::quit() {
 #if defined USE_KPP2
-    if (!EvalMemKey.empty()) {
-        if (EvalMemKey.find("c:") == 0) {
-            auto key = EvalMemKey.substr(2);
-            SharedMem.remove(key.c_str());
+    if (KPP != nullptr) {
+        if (KPPDeleteNeeded) {
+            delete[] KPP;
+            KPPDeleteNeeded = false;
         }
-    }
-    else if (KPP != nullptr) {
-        delete[] KPP;
         KPP = nullptr;
     }
 #endif
@@ -420,36 +418,19 @@ bool Evaluater::readSynthesized(const std::string& dirName) {
     }
 #endif
 #if defined USE_KPP2
-    if (!EvalMemKey.empty()) {
-        if (EvalMemKey.find("c:") == 0) {
-            // 共有メモリを作成します。
-            auto key = EvalMemKey.substr(2);
-            ipc::shared_memory_object::remove(key.c_str());
-            ipc::permissions perm;
-            perm.set_unrestricted();
-            SharedMem = ipc::shared_memory_object(
-                ipc::create_only, key.c_str(), ipc::read_write, perm);
-            SharedMem.truncate((int)SquareNum * sizeof(KPPEntry));
-            SharedRegion = ipc::mapped_region(SharedMem, ipc::read_write);
-            KPP = (KPPEntry *)SharedRegion.get_address();
-
-            std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
-            if (!loadKPP2(ifs, KPP)) return false;
-        }
-        else {
-            // 共有メモリから評価関数ファイルを共有します。
-            SharedMem = ipc::shared_memory_object(
-                ipc::open_only, EvalMemKey.c_str(), ipc::read_only);
-            SharedMem.truncate((int)SquareNum * sizeof(KPPEntry));
-            SharedRegion = ipc::mapped_region(SharedMem, ipc::read_only);
-            KPP = (KPPEntry *)SharedRegion.get_address();
-        }
+    auto binFileName = addSlashIfNone(dirName) + "KPP_synthesized.bin";
+    if (boost::filesystem::exists(binFileName)) {
+        // MappedFileオブジェクトを作成します。
+        MappedFile = ipc::file_mapping(binFileName.c_str(), ipc::read_only);
+        MappedRegion = ipc::mapped_region(MappedFile, ipc::read_only);
+        KPP = (KPPEntry *)MappedRegion.get_address();
     }
     else {
         KPPEntry *kpp = new KPPEntry[SquareNum];
         std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
         if (!loadKPP2(ifs, kpp)) { delete[] kpp; return false; }
         KPP = kpp;
+        KPPDeleteNeeded = true;
     }
 #endif
     {
