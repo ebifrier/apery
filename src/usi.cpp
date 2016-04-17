@@ -10,6 +10,15 @@
 #include "benchmark.hpp"
 #include "learner.hpp"
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+const std::string MyName = "Godwhale_Apery-3.0.3";
+const int LoginNameMaxLength = 12;
+#elif defined(NDEBUG)
+const std::string MyName = "Apery_Twig_SDT3";
+#else
+const std::string MyName = "Apery Debug Build";
+#endif
+
 namespace {
 	void onThreads(Searcher* s, const USIOption&)      { s->threads.readUSIOptions(s); }
 	void onHashSize(Searcher* s, const USIOption& opt) { s->tt.setSize(opt); }
@@ -456,15 +465,6 @@ void measureGenerateMoves(const Position& pos) {
 	}
 	std::cout << std::endl;
 }
-#endif
-
-#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-const std::string MyName = "Godwhale_Apery-3.0.0";
-const int LoginNameMaxLength = 12;
-#elif defined(NDEBUG)
-const std::string MyName = "Apery_Twig_SDT3";
-#else
-const std::string MyName = "Apery Debug Build";
 #endif
 
 void Searcher::doUSICommandLoop(int argc, char* argv[]) {
