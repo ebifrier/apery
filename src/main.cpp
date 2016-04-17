@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (s != nullptr) s->threads.exit();
-    if (e != nullptr) e->quit();
+    if (e != nullptr) e->finiKPP();
 }
 
 #endif
