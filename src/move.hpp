@@ -89,8 +89,9 @@ public:
 
 	static Move moveNone() { return Move(MoveNone); }
 	static Move moveNull() { return Move(MoveNull); }
-#if defined(GODWHALE_CLUSTER_MASTER)
+#if defined GODWHALE_CLUSTER_MASTER
     static Move moveOther() { return Move(MoveNull); }
+    bool isOther() const    { return (value() == MoveNull); }
 #endif
 	// 学習時に、正解の手のPV、その他の手のPVを MoveNone で区切りながら 1 次元配列に格納していく。
 	// 格納するその他のPVの最後に MovePVsEnd を格納する。それをフラグに次の指し手に遷移する。
