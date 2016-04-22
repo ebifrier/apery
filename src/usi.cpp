@@ -165,7 +165,11 @@ std::ostream& operator << (std::ostream& os, const OptionsMap& om) {
 	return os;
 }
 
-void go(const Position& pos, std::istringstream& ssCmd) {
+void go(const Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+        , bool isRSI/*= false*/
+#endif
+    ) {
 	LimitsType limits;
 	std::vector<Move> moves;
 	std::string token;
@@ -190,7 +194,7 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 				moves.push_back(usiToMove(pos, token));
 		}
 #if defined GODWHALE_CLUSTER_SLAVE
-        else if (token == "ignoremoves") {
+        else if (isRSI && token == "ignoremoves") {
             while (ssCmd >> token)
                 ignoreMoves.push_back(usiToMove(pos, token));
         }
@@ -366,11 +370,12 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 		ssCmd >> token; // "moves" が入力されるはず。
 	}
 	else if (token == "sfen") {
-		while (ssCmd >> token && token != "moves"
-#if defined GODWHALE_CLUSTER_SLAVE
-               && (isRSI && token != "brunch")
+#if !defined GODWHALE_CLUSTER_SLAVE
+		while (ssCmd >> token && token != "moves") {
+#else
+        while (ssCmd >> token &&
+               (token != "moves" && (isRSI && token != "branch"))) {
 #endif
-            ) {
 			sfen += token + " ";
 		}
 	}
@@ -390,6 +395,9 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 
 	Ply currentPly = pos.gamePly();
 	while (ssCmd >> token) {
+#if defined GODWHALE_CLUSTER_SLAVE
+        if (token == "moves" || (isRSI && token == "branch")) continue;
+#endif
 		const Move move = usiToMove(pos, token);
 		if (move.isNone()) break;
 		pos.searcher()->setUpStates->push(StateInfo());
@@ -524,8 +532,9 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
 		else if (token == "position" ) { setPosition(pos, ssCmd); }
 #if defined GODWHALE_CLUSTER_SLAVE
         else if (token == "xposition") { setPosition(pos, ssCmd, true); }
+        else if (token == "xgo")       { go(pos, ssCmd, true); }
         else if (token == "xinfo")     { /* GUI用のコマンド。ここでは何もしない*/ }
-        else if (token == "keepalive") { SYNCCOUT << "keepalive ok" << SYNCENDL; }
+        else if (token == "xkeepalive"){ SYNCCOUT << "keepalive ok" << SYNCENDL; }
 #endif
 		else if (token == "setoption") { setOption(ssCmd); }
 #if defined LEARN

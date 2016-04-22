@@ -57,7 +57,11 @@ public:
 	}
 };
 
-void go(const Position& pos, std::istringstream& ssCmd);
+void go(const Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+        , bool isRSI = false
+#endif
+    );
 #if defined LEARN
 void go(const Position& pos, const Ply depth, const Move move);
 #endif
