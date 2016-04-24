@@ -11,7 +11,7 @@
 #include "learner.hpp"
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-const std::string MyName = "Godwhale_Apery-3.0.3";
+const std::string MyName = "Godwhale_Apery-3.0.4";
 const int LoginNameMaxLength = 12;
 #elif defined(NDEBUG)
 const std::string MyName = "Apery_Twig_SDT3";

@@ -7,7 +7,7 @@
 #include "tt.hpp"
 #include "search.hpp"
 
-#if defined(GODWHALE_CLUSTER_SLAVE)
+#if defined GODWHALE_CLUSTER_SLAVE 
 #include "godwhaleIo.hpp"
 #endif
 
@@ -34,7 +34,7 @@ int main() {
 	return 0;
 }
 
-#else
+#elif defined GODWHALE_CLUSTER_SLAVE 
 static void validateLoginName(const std::string name) {
     if (name.empty()) {
         std::cerr << "The Login_Name is empty !" << std::endl;
@@ -89,6 +89,21 @@ int main(int argc, char* argv[]) {
 
     if (s != nullptr) s->threads.exit();
     if (e != nullptr) e->finiKPP();
+}
+
+#else
+
+// 将棋を指すソフト
+int main(int argc, char* argv[]) {
+    initTable();
+    Position::initZobrist();
+    std::unique_ptr<Searcher> s(new Searcher);
+    s->init();
+    // 一時オブジェクトの生成と破棄
+    std::unique_ptr<Evaluater>(new Evaluater)->init(s->options["Eval_Dir"], true);
+
+    s->doUSICommandLoop(argc, argv);
+    s->threads.exit();
 }
 
 #endif
