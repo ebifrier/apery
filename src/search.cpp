@@ -840,7 +840,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
     const bool rootNode = PvNode && (ss - 1)->ply == 0;
 
 	assert(-ScoreInfinite <= alpha && alpha < beta && beta <= ScoreInfinite);
-	assert(PVNode || (alpha == beta - 1));
+	assert(PvNode || (alpha == beta - 1));
 	assert(Depth0 < depth && depth < DepthMax);
 
 	// 途中で goto を使用している為、先に全部の変数を定義しておいた方が安全。
@@ -1049,7 +1049,7 @@ Score search(Position& pos, Stack* ss, Score alpha, Score beta, const Depth dept
 				return nullScore;
 
 			ss->skipEarlyPruning = true;
-			assert(Depth0 < depth - reduction);
+			assert(Depth0 < depth - R);
 			const Score s = depth-R < OnePly ? 
                qsearch<NonPV, false>(pos, ss, beta-1, beta, Depth0)
               : search<NonPV>(pos, ss, beta-1, beta, depth-R, false);
