@@ -7,6 +7,10 @@
 #include "tt.hpp"
 #include "search.hpp"
 
+#if defined GODWHALE_CLUSTER_SLAVE 
+#include "godwhaleIo.hpp"
+#endif
+
 #if defined FIND_MAGIC
 // Magic Bitboard の Magic Number を求める為のソフト
 int main() {
@@ -30,12 +34,69 @@ int main() {
 	return 0;
 }
 
+#elif defined GODWHALE_CLUSTER_SLAVE 
+static void validateLoginName(const std::string name) {
+    if (name.empty()) {
+        std::cerr << "The Login_Name is empty !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (name.length() > LoginNameMaxLength) {
+        std::cerr << "The Login_Name is too long !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (!std::all_of(name.begin(), name.end(), [](char _) { return (isalnum(_) || _ == '_'); })) {
+        std::cerr << "The Login_Name '" << name << "' has invalid character !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+// 将棋を指すソフト
+int main(int argc, char* argv[]) {
+    // usage godwhale_apery host port name [threads]
+
+    try {
+        initTable();
+        Position::initZobrist();
+        Search::init();
+
+        USI::init(Options);
+        Threads.init();
+        TT.resize(Options["Hash"]);
+
+        std::unique_ptr<Evaluater> e(new Evaluater);
+        e->init(Options["Eval_Dir"], true);
+
+        if (argc > 3) {
+            auto loginName = argv[3];
+            validateLoginName(loginName);
+            Options["Login_Name"] = USI::Option(loginName);
+            if (argc > 4) {
+                Options["Threads"] = std::stoi(argv[4]);
+            }
+
+            startGodwhaleIo(argv[1], argv[2]);
+            USI::loop(1, argv);
+            closeGodwhaleIo();
+        }
+        else {
+            USI::loop(argc, argv);
+        }
+    }
+    catch (std::exception &ex) {
+        std::cerr << "unhandled exception: " << ex.what() << std::endl;
+    }
+
+    Threads.exit();
+}
+
 #else
+
 // 将棋を指すソフト
 int main(int argc, char* argv[]) {
 	initTable();
 	Position::initZobrist();
-	//auto s = std::unique_ptr<Search>(new Search);
     Search::init();
 
     USI::init(Options);

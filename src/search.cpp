@@ -342,6 +342,9 @@ std::string pvInfoToUSI(Position& pos, const Depth depth, const Score alpha, con
 		   << " nps " << (0 < t ? nodesSearched * 1000 / t : 0)
 		   << " time " << t
 		   << " multipv " << i + 1
+#if defined GODWHALE_CLUSTER_SLAVE
+           << " id " << pos.id
+#endif
 		   << " pv ";
 
 		for (Move m : rootMoves[i].pv)

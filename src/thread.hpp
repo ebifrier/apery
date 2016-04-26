@@ -10,19 +10,19 @@
 
 class Thread {
 
-  std::thread nativeThread;
-  Mutex mutex;
-  ConditionVariable sleepCondition;
-  bool exit, searching;
+    std::thread nativeThread;
+    Mutex mutex;
+    ConditionVariable sleepCondition;
+    bool exit, searching;
 
 public:
-  Thread();
-  virtual ~Thread();
-  virtual void search();
-  void idle_loop();
-  void start_searching(bool resume = false);
-  void wait_for_search_finished();
-  void wait(std::atomic_bool& b);
+    Thread();
+    virtual ~Thread();
+    virtual void search();
+    void idle_loop();
+    void start_searching(bool resume = false);
+    void wait_for_search_finished();
+    void wait(std::atomic_bool& b);
 
     size_t pvIdx;
 	size_t idx;
@@ -38,11 +38,11 @@ public:
 };
 
 struct MainThread : public Thread {
-  virtual void search();
+    virtual void search();
 
-  bool easyMovePlayed, failedLow;
-  double bestMoveChanges;
-  Score previousScore;
+    bool easyMovePlayed, failedLow;
+    double bestMoveChanges;
+    Score previousScore;
 };
 
 struct ThreadPool : public std::vector<Thread*> {
@@ -51,7 +51,12 @@ struct ThreadPool : public std::vector<Thread*> {
 	void exit();
 
 	MainThread* main() { return static_cast<MainThread*>(at(0)); }
-	void startThinking(const Position& pos, const Search::LimitsType& limits, const std::vector<Move>& searchMoves);
+    void startThinking(const Position& pos, const Search::LimitsType& limits,
+                       const std::vector<Move>& searchMoves
+#if defined GODWHALE_CLUSTER_SLAVE
+                       , const std::vector<Move>& ignoreMoves = {}
+#endif
+                       );
     void readUSIOptions();
     int64_t nodes_searched();
 };

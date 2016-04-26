@@ -4,6 +4,11 @@
 #include "common.hpp"
 #include "move.hpp"
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+extern const int LoginNameMaxLength;
+#endif
+
+extern const std::string MyName;
 const std::string DefaultStartPositionSFEN = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
 
 namespace USI {
@@ -51,15 +56,23 @@ private:
 void init(OptionsMap&);
 void loop(int argc, char* argv[]);
 
-} // namespace UCI
+} // namespace USI
 
 extern USI::OptionsMap Options;
 
-void go(const Position& pos, std::istringstream& ssCmd);
+void go(const Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+        , bool isRSI = false
+#endif
+    );
 #if defined LEARN
 void go(const Position& pos, const Ply depth, const Move move);
 #endif
-void setPosition(Position& pos, std::istringstream& ssCmd);
+void setPosition(Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+                 , bool isRSI = false
+#endif
+    );
 void setOption(std::istringstream& ssCmd);
 Move csaToMove(const Position& pos, const std::string& moveStr);
 Move usiToMove(const Position& pos, const std::string& moveStr);

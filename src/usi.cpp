@@ -14,6 +14,17 @@
 
 using namespace std;
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+const int LoginNameMaxLength = 12;
+const std::string MyName = "Godwhale_Apery-3.0.4";
+#else
+#ifdef NDEBUG
+const std::string MyName = "SILENT_MAJORITY";
+#else
+const std::string MyName = "Apery Debug Build";
+#endif
+#endif
+
 USI::OptionsMap Options; // Global object
 
 namespace {
@@ -152,10 +163,17 @@ std::ostream& operator << (std::ostream& os, const OptionsMap& om) {
 
 } // namespace USI
 
-void go(const Position& pos, std::istringstream& ssCmd) {
+void go(const Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+        , bool isRSI/*= false*/
+#endif
+    ) {
 	Search::LimitsType limits;
 	std::vector<Move> moves;
 	std::string token;
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::vector<Move> ignoreMoves;
+#endif
 
     limits.startTime = now(); // As early as possible!
 
@@ -175,9 +193,20 @@ void go(const Position& pos, std::istringstream& ssCmd) {
 			while (ssCmd >> token)
 				moves.push_back(usiToMove(pos, token));
 		}
+#if defined GODWHALE_CLUSTER_SLAVE
+		else if (isRSI && token == "ignoremoves") {
+			while (ssCmd >> token)
+				ignoreMoves.push_back(usiToMove(pos, token));
+		}
+#endif
 	}
+
 	Search::SearchMoves = moves;
-	Threads.startThinking(pos, limits, moves);
+	Threads.startThinking(pos, limits, moves
+#if defined GODWHALE_CLUSTER_SLAVE
+						  , ignoreMoves
+#endif
+						  );
 }
 
 #if defined LEARN
@@ -303,9 +332,20 @@ Move csaToMove(const Position& pos, const std::string& moveStr) {
 	return move;
 }
 
-void setPosition(Position& pos, std::istringstream& ssCmd) {
+void setPosition(Position& pos, std::istringstream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+                 , bool isRSI /*= false*/
+#endif
+    ) {
 	std::string token;
 	std::string sfen;
+
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::string id;
+    if (isRSI) {
+        ssCmd >> id;
+    }
+#endif
 
 	ssCmd >> token;
 
@@ -314,17 +354,34 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
 		ssCmd >> token; // "moves" が入力されるはず。
 	}
 	else if (token == "sfen") {
-		while (ssCmd >> token && token != "moves")
+#if !defined GODWHALE_CLUSTER_SLAVE
+		while (ssCmd >> token && token != "moves") {
+#else
+        while (ssCmd >> token &&
+               (token != "moves" && (isRSI && token != "branch"))) {
+#endif
 			sfen += token + " ";
+		}
 	}
-	else
+	else {
 		return;
+	}
 
 	pos.set(sfen, Threads.main());
 	Search::SetUpStates = StateStackPtr(new std::stack<StateInfo>());
 
+    // IDはsetが終わった後に設定しないと0クリアされてしまう
+#if defined GODWHALE_CLUSTER_SLAVE
+    if (!id.empty()) {
+        pos.id = std::stoi(id);
+    }
+#endif
+
 	Ply currentPly = pos.gamePly();
 	while (ssCmd >> token) {
+#if defined GODWHALE_CLUSTER_SLAVE
+        if (token == "moves" || (isRSI && token == "branch")) continue;
+#endif
 		const Move move = usiToMove(pos, token);
 		if (move.isNone()) break;
 		Search::SetUpStates->push(StateInfo());
@@ -400,12 +457,6 @@ void measureGenerateMoves(const Position& pos) {
 }
 #endif
 
-#ifdef NDEBUG
-const std::string MyName = "SILENT_MAJORITY";
-#else
-const std::string MyName = "Apery Debug Build";
-#endif
-
 void USI::loop(int argc, char* argv[]) {
 	Position pos(DefaultStartPositionSFEN, Threads.main());
 
@@ -458,6 +509,12 @@ void USI::loop(int argc, char* argv[]) {
 		else if (token == "isready"  ) SYNCCOUT << "readyok" << SYNCENDL;
 		else if (token == "position" ) setPosition(pos, ssCmd);
 		else if (token == "setoption") setOption(ssCmd);
+#if defined GODWHALE_CLUSTER_SLAVE
+        else if (token == "xposition")  setPosition(pos, ssCmd, true);
+        else if (token == "xgo")        go(pos, ssCmd, true);
+        else if (token == "xinfo")      { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xkeepalive") SYNCCOUT << "keepalive ok" << SYNCENDL;
+#endif
 #if defined LEARN
 		else if (token == "l"        ) {
 			auto learner = std::unique_ptr<Learner>(new Learner);

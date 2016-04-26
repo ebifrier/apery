@@ -82,6 +82,10 @@ public:
 	Position& operator = (const Position& pos);
 	void set(const std::string& sfen, Thread* th);
 
+#if defined GODWHALE_CLUSTER_SLAVE
+    int id;
+#endif
+
 	Bitboard bbOf(const PieceType pt) const                                            { return byTypeBB_[pt]; }
 	Bitboard bbOf(const Color c) const                                                 { return byColorBB_[c]; }
 	Bitboard bbOf(const PieceType pt, const Color c) const                             { return bbOf(pt) & bbOf(c); }
@@ -227,7 +231,10 @@ public:
 		static_assert(zobTurn_ == 1, "");
 		return getKey() >> 1;
 	}
+
+    std::string toUSI() const;
 	void print() const;
+    void print(std::ostream& os) const;
 
 	u64 nodesSearched() const          { return nodes_; }
 	void setNodesSearched(const u64 n) { nodes_ = n; }
@@ -343,7 +350,7 @@ private:
 	Key computeHandKey() const;
 	Key computeKey() const { return computeBoardKey() + computeHandKey(); }
 
-	void printHand(const Color c) const;
+	void printHand(std::ostream& os, const Color c) const;
 
 	static Key zobrist(const PieceType pt, const Square sq, const Color c) { return zobrist_[pt][sq][c]; }
 	static Key zobTurn()                                                   { return zobTurn_; }
@@ -416,5 +423,44 @@ public:
 	bool isLegalChar(char c) const { return (this->find(c) != this->end()); }
 };
 extern const CharToPieceUSI g_charToPieceUSI;
+
+struct PieceToCharUSI : public std::map<Piece, std::string> {
+    PieceToCharUSI() {
+        (*this)[BPawn] = 'P';   (*this)[WPawn] = 'p';
+        (*this)[BLance] = 'L';  (*this)[WLance] = 'l';
+        (*this)[BKnight] = 'N'; (*this)[WKnight] = 'n';
+        (*this)[BSilver] = 'S'; (*this)[WSilver] = 's';
+        (*this)[BBishop] = 'B'; (*this)[WBishop] = 'b';
+        (*this)[BRook] = 'R';   (*this)[WRook] = 'r';
+        (*this)[BGold] = 'G';   (*this)[WGold] = 'g';
+        (*this)[BKing] = 'K';   (*this)[WKing] = 'k';
+
+        (*this)[BProPawn] = "+P";   (*this)[WProPawn] = "+p";
+        (*this)[BProLance] = "+L";  (*this)[WProLance] = "+l";
+        (*this)[BProKnight] = "+N"; (*this)[WProKnight] = "+n";
+        (*this)[BProSilver] = "+S"; (*this)[WProSilver] = "+s";
+        (*this)[BHorse] = "+B";     (*this)[WHorse] = "+b";
+        (*this)[BDragon] = "+R";    (*this)[WDragon] = "+r";
+    }
+    std::string value(Piece piece) const { return find(piece)->second; }
+};
+extern const PieceToCharUSI g_pieceToCharUSI;
+
+struct HandToCharUSI : public std::map<std::pair<Color, HandPiece>, char> {
+    HandToCharUSI() {
+        using std::make_pair;
+        (*this)[make_pair(Black, HPawn)] = 'P';   (*this)[make_pair(White, HPawn)] = 'p';
+        (*this)[make_pair(Black, HLance)] = 'L';  (*this)[make_pair(White, HLance)] = 'l';
+        (*this)[make_pair(Black, HKnight)] = 'N'; (*this)[make_pair(White, HKnight)] = 'n';
+        (*this)[make_pair(Black, HSilver)] = 'S'; (*this)[make_pair(White, HSilver)] = 's';
+        (*this)[make_pair(Black, HBishop)] = 'B'; (*this)[make_pair(White, HBishop)] = 'b';
+        (*this)[make_pair(Black, HRook)] = 'R';   (*this)[make_pair(White, HRook)] = 'r';
+        (*this)[make_pair(Black, HGold)] = 'G';   (*this)[make_pair(White, HGold)] = 'g';
+    }
+    char value(Color color, HandPiece piece) const {
+        return find(std::make_pair(color, piece))->second;
+    }
+};
+extern const HandToCharUSI g_handToCharUSI;
 
 #endif // #ifndef APERY_POSITION_HPP

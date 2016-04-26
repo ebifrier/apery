@@ -3,11 +3,32 @@
 #include "search.hpp"
 #include "thread.hpp"
 
+#if defined USE_KPP2
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
+#endif
+
 KPPBoardIndexStartToPiece g_kppBoardIndexStartToPiece;
 
+#if defined USE_KPP2
+std::array<s16, 2> (*Evaluater::KPP)[fe_end][fe_end];
+#else
 std::array<s16, 2> Evaluater::KPP[SquareNum][fe_end][fe_end];
+#endif
 std::array<s32, 2> Evaluater::KKP[SquareNum][SquareNum][fe_end];
 std::array<s32, 2> Evaluater::KK[SquareNum][SquareNum];
+
+#if defined USE_KPP2
+#define KPP2Index(i,j) ((i)*((i)+1)/2+(j))
+enum { pos_n = fe_end * (fe_end + 1) / 2 };
+typedef std::array<s16, 2> KPP2Entry[pos_n];
+typedef std::array<s16, 2> KPPEntry[fe_end][fe_end];
+
+namespace ipc = boost::interprocess;
+static ipc::file_mapping MappedFile;
+static ipc::mapped_region MappedRegion;
+static bool KPPDeleteNeeded = false;
+#endif
 
 #if defined USE_K_FIX_OFFSET
 const s32 Evaluater::K_Fix_Offset[SquareNum] = {
@@ -45,6 +66,35 @@ const int kppHandArray[ColorNum][HandPieceNum] = {
 };
 
 namespace {
+#if defined USE_KPP2
+	bool loadKPP2(std::ifstream& ifs, KPPEntry* KPP) {
+		if (!ifs) return false;
+
+		// KPPのサイズを半分にしたテーブルからデータ読み込み
+		KPP2Entry* KPP2 = new KPP2Entry[SquareNum];
+		ifs.read(reinterpret_cast<char*>(KPP2), sizeof(KPP2Entry) * (int)SquareNum);
+		ifs.close();
+
+		for (int sq = 0; sq < SquareNum; ++sq) {
+			for (int i = 0; i < fe_end; ++i) {
+				for (int j = 0; j <= i; ++j) {
+					auto value = KPP2[sq][KPP2Index(i, j)];
+#if defined TEST_KPP2
+					if (value != KPP[sq][i][j] || value != KPP[sq][j][i]) {
+						std::cout << "the value of KPP2 is wrong." << std::endl;
+					}
+#endif
+					KPP[sq][i][j] = value;
+					KPP[sq][j][i] = value;
+				}
+			}
+		}
+
+		delete[] KPP2;
+		return true;
+	}
+#endif
+
 	EvalSum doapc(const Position& pos, const int index[2]) {
 		const Square sq_bk = pos.kingSquare(Black);
 		const Square sq_wk = pos.kingSquare(White);
@@ -345,6 +395,98 @@ namespace {
 
 		assert(evaluateUnUseDiff(pos) == sum.sum(pos.turn()));
 	}
+}
+
+Evaluater::~Evaluater() {
+    finiKPP();
+}
+
+void Evaluater::initKPP() {
+#if defined USE_KPP2
+    finiKPP();
+
+    KPP = new KPPEntry[SquareNum];
+    KPPDeleteNeeded = true;
+#endif
+}
+
+void Evaluater::finiKPP() {
+#if defined USE_KPP2
+    if (KPP != nullptr) {
+        if (KPPDeleteNeeded) {
+            delete[] KPP;
+            KPPDeleteNeeded = false;
+        }
+        KPP = nullptr;
+    }
+#endif
+}
+
+bool Evaluater::readSynthesized(const std::string& dirName) {
+#if !defined USE_KPP2 || defined TEST_KPP2
+    {
+        std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized.bin").c_str(), std::ios::binary);
+        if (ifs) ifs.read(reinterpret_cast<char*>(KPP), sizeof(KPP));
+        else     return false;
+    }
+#endif
+#if defined USE_KPP2
+    auto binFileName = addSlashIfNone(dirName) + "KPP_synthesized.bin";
+    if (boost::filesystem::exists(binFileName)) {
+        // MappedFileオブジェクトを作成します。
+        MappedFile = ipc::file_mapping(binFileName.c_str(), ipc::read_only);
+        MappedRegion = ipc::mapped_region(MappedFile, ipc::read_only);
+        KPP = (KPPEntry *)MappedRegion.get_address();
+    }
+    else {
+        KPPEntry *kpp = new KPPEntry[SquareNum];
+        std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
+        if (!loadKPP2(ifs, kpp)) { delete[] kpp; return false; }
+        KPP = kpp;
+        KPPDeleteNeeded = true;
+    }
+#endif
+    {
+        std::ifstream ifs((addSlashIfNone(dirName) + "KKP_synthesized.bin").c_str(), std::ios::binary);
+        if (ifs) ifs.read(reinterpret_cast<char*>(KKP), sizeof(KKP));
+        else     return false;
+    }
+    {
+        std::ifstream ifs((addSlashIfNone(dirName) + "KK_synthesized.bin").c_str(), std::ios::binary);
+        if (ifs) ifs.read(reinterpret_cast<char*>(KK), sizeof(KK));
+        else     return false;
+    }
+    return true;
+}
+
+void Evaluater::writeSynthesized(const std::string& dirName) {
+    {
+#if !defined USE_KPP2
+        std::ofstream ofs((addSlashIfNone(dirName) + "KPP_synthesized.bin").c_str(), std::ios::binary);
+        ofs.write(reinterpret_cast<char*>(KPP), sizeof(KPP));
+#else
+        KPP2Entry* KPP2 = new KPP2Entry[SquareNum];
+        for (int sq = 0; sq < SquareNum; ++sq) {
+            for (int i = 0; i < fe_end; ++i) {
+                for (int j = 0; j <= i; ++j) {
+                    KPP2[sq][KPP2Index(i, j)] = KPP[sq][i][j];
+                }
+            }
+        }
+
+        std::ofstream ofs((addSlashIfNone(dirName) + "KPP_synthesized2.bin").c_str(), std::ios::binary);
+        ofs.write(reinterpret_cast<char*>(KPP2), sizeof(KPP2Entry) * (int)SquareNum);
+        delete[] KPP2;
+#endif
+    }
+    {
+        std::ofstream ofs((addSlashIfNone(dirName) + "KKP_synthesized.bin").c_str(), std::ios::binary);
+        ofs.write(reinterpret_cast<char*>(KKP), sizeof(KKP));
+    }
+    {
+        std::ofstream ofs((addSlashIfNone(dirName) + "KK_synthesized.bin").c_str(), std::ios::binary);
+        ofs.write(reinterpret_cast<char*>(KK), sizeof(KK));
+    }
 }
 
 // todo: 無名名前空間に入れる。

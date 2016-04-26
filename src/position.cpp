@@ -10,6 +10,8 @@ Key Position::zobHand_[HandPieceNum][ColorNum];
 Key Position::zobExclusion_;
 
 const CharToPieceUSI g_charToPieceUSI;
+const PieceToCharUSI g_pieceToCharUSI;
+const HandToCharUSI g_handToCharUSI;
 
 namespace {
 	const char* PieceToCharCSATable[PieceNone] = {
@@ -195,6 +197,13 @@ bool Position::moveIsPseudoLegal(const Move move, const bool checkPawnDrop) cons
 					return false;
 			}
 		}
+        /**/
+        if (move.isPromotion()) {
+            //成る手の時、移動する駒の種類が成れる駒でないとダメ
+            if (ptFrom >= Gold && ptFrom <= Dragon) {
+                return false;
+            }
+        }/**/
 	}
 
 	return true;
@@ -240,8 +249,7 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
 		handKey -= zobHand(hpTo, us);
 		boardKey += zobrist(ptTo, to, us);
-
-		prefetch(TT.firstEntry(boardKey + handKey));
+        prefetch(TT.firstEntry(boardKey + handKey));
 
 		const int handnum = hand(us).numOf(hpTo);
 		const int listIndex = evalList_.squareHandToList[HandPieceToSquareHand[us][hpTo] + handnum];
@@ -315,7 +323,9 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
 			st_->material += (us == Black ? capturePieceScore(ptCaptured) : -capturePieceScore(ptCaptured));
 		}
-		prefetch(TT.firstEntry(boardKey + handKey));
+
+        prefetch(TT.firstEntry(boardKey + handKey));
+
 		// Occupied は to, from の位置のビットを操作するよりも、
 		// Black と White の or を取る方が速いはず。
 		byTypeBB_[Occupied] = bbOf(Black) | bbOf(White);
@@ -1488,21 +1498,72 @@ void Position::initZobrist() {
 	zobExclusion_ = g_mt64bit.random() & ~UINT64_C(1);
 }
 
+std::string Position::toUSI() const
+{
+    std::string usi;
+
+    // 盤面
+    for (Rank rank = Rank9; rank <= Rank1; ++rank) {
+        if (rank != Rank9) usi += "/";
+
+        int spaceCount = 0;
+        for (File file = File1; file >= File9; --file) {
+            auto pc = piece(makeSquare(file, rank));
+
+            if (pc == Empty) {
+                // 駒がない場合
+                spaceCount += 1;
+            }
+            else {
+                // 駒がある場合
+                if (spaceCount > 0) {
+                    usi += std::to_string(spaceCount);
+                    spaceCount = 0;
+                }
+                usi += g_pieceToCharUSI.value(pc);
+            }
+        }
+
+        // 空白の数は数字で示します。
+        if (spaceCount > 0) usi += std::to_string(spaceCount);
+    }
+
+    // 手番
+    usi += (turn() == Black ? " b " : " w ");
+
+    // 持ち駒
+    std::string handUSI;
+    for (Color color = Black; color != ColorNum; ++color) {
+        for (HandPiece piece = HRook; piece >= HPawn; --piece) {
+            auto count = hand(color).numOf(piece);
+            if (count > 1) handUSI += std::to_string(count);
+            if (count > 0) handUSI += g_handToCharUSI.value(color, piece);
+        }
+    }
+    usi += (handUSI.empty() ? "-" : handUSI);
+
+    return (usi + " 1"); // 手数も追加
+}
+
 void Position::print() const {
-	std::cout << "'  9  8  7  6  5  4  3  2  1" << std::endl;
+    print(std::cout);
+}
+
+void Position::print(std::ostream &os) const {
+    os << "'  9  8  7  6  5  4  3  2  1" << std::endl;
 	int i = 0;
 	for (Rank r = Rank1; r < RankNum; ++r) {
 		++i;
-		std::cout << "P" << i;
+        os << "P" << i;
 		for (File f = File9; File1 <= f; --f)
-			std::cout << pieceToCharCSA(piece(makeSquare(f, r)));
-		std::cout << std::endl;
+            os << pieceToCharCSA(piece(makeSquare(f, r)));
+		os << std::endl;
 	}
-	printHand(Black);
-	printHand(White);
-	std::cout << (turn() == Black ? "+" : "-") << std::endl;
-	std::cout << std::endl;
-	std::cout << "key = " << getKey() << std::endl;
+	printHand(os, Black);
+	printHand(os, White);
+    os << (turn() == Black ? "+" : "-") << std::endl;
+    os << std::endl;
+    os << "key = " << getKey() << std::endl;
 }
 
 #if !defined NDEBUG
@@ -1698,24 +1759,24 @@ RepetitionType Position::isDraw(const int checkMaxPly) const {
 }
 
 namespace {
-	void printHandPiece(const Position& pos, const HandPiece hp, const Color c, const std::string& str) {
+	void printHandPiece(std::ostream& os, const Position& pos, const HandPiece hp, const Color c, const std::string& str) {
 		if (pos.hand(c).numOf(hp)) {
 			const char* sign = (c == Black ? "+" : "-");
-			std::cout << "P" << sign;
+			os << "P" << sign;
 			for (u32 i = 0; i < pos.hand(c).numOf(hp); ++i)
-				std::cout << "00" << str;
-			std::cout << std::endl;
+                os << "00" << str;
+            os << std::endl;
 		}
 	}
 }
-void Position::printHand(const Color c) const {
-	printHandPiece(*this, HPawn  , c, "FU");
-	printHandPiece(*this, HLance , c, "KY");
-	printHandPiece(*this, HKnight, c, "KE");
-	printHandPiece(*this, HSilver, c, "GI");
-	printHandPiece(*this, HGold  , c, "KI");
-	printHandPiece(*this, HBishop, c, "KA");
-	printHandPiece(*this, HRook  , c, "HI");
+void Position::printHand(std::ostream& os, const Color c) const {
+	printHandPiece(os, *this, HPawn  , c, "FU");
+	printHandPiece(os, *this, HLance , c, "KY");
+	printHandPiece(os, *this, HKnight, c, "KE");
+	printHandPiece(os, *this, HSilver, c, "GI");
+	printHandPiece(os, *this, HGold  , c, "KI");
+	printHandPiece(os, *this, HBishop, c, "KA");
+	printHandPiece(os, *this, HRook  , c, "HI");
 }
 
 Position& Position::operator = (const Position& pos) {

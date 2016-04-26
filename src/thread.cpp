@@ -118,15 +118,19 @@ int64_t ThreadPool::nodes_searched() {
 }
 
 void ThreadPool::startThinking(const Position& pos, const Search::LimitsType& limits,
-							   const std::vector<Move>& searchMoves)
+							   const std::vector<Move>& searchMoves
+#if defined GODWHALE_CLUSTER_SLAVE
+							   , const std::vector<Move>& ignoreMoves
+#endif
+							   )
 {
 #if defined LEARN
 #else
-  main()->wait_for_search_finished();
+    main()->wait_for_search_finished();
 #endif
 
-  Search::Signals.stopOnPonderhit = Search::Signals.stop = false;
-  Search::Limits = limits;
+    Search::Signals.stopOnPonderhit = Search::Signals.stop = false;
+    Search::Limits = limits;
 
     main()->rootMoves.clear();
     main()->rootPos = pos;
@@ -137,8 +141,13 @@ void ThreadPool::startThinking(const Position& pos, const Search::LimitsType& li
 #else
 	const MoveType MT = Legal;
 	for (MoveList<MT> ml(pos); !ml.end(); ++ml) {
-		if (searchMoves.empty()
-			|| std::find(searchMoves.begin(), searchMoves.end(), ml.move()) != searchMoves.end())
+		if ((searchMoves.empty()
+			 || std::find(searchMoves.begin(), searchMoves.end(), ml.move()) != searchMoves.end())
+#if defined(GODWHALE_CLUSTER_SLAVE)
+			&& (ignoreMoves.empty()
+			 || std::find(ignoreMoves.begin(), ignoreMoves.end(), ml.move()) == ignoreMoves.end())
+#endif
+			)
 		{
           main()->rootMoves.push_back(RootMove(ml.move()));
 		}
