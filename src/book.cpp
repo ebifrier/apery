@@ -12,14 +12,12 @@ Key Book::ZobTurn;
 
 void Book::init() {
 	for (Piece p = Empty; p < PieceNone; ++p) {
-		for (Square sq = I9; sq < SquareNum; ++sq) {
+		for (Square sq = SQ11; sq < SquareNum; ++sq)
 			ZobPiece[p][sq] = mt64bit_.random();
-		}
 	}
 	for (HandPiece hp = HPawn; hp < HandPieceNum; ++hp) {
-		for (int num = 0; num < 19; ++num) {
+		for (int num = 0; num < 19; ++num)
 			ZobHand[hp][num] = mt64bit_.random();
-		}
 	}
 	ZobTurn = mt64bit_.random();
 }
@@ -27,15 +25,13 @@ void Book::init() {
 bool Book::open(const char* fName) {
 	fileName_ = "";
 
-	if (is_open()) {
+	if (is_open())
 		close();
-	}
 
 	std::ifstream::open(fName, std::ifstream::in | std::ifstream::binary | std::ios::ate);
 
-	if (!is_open()) {
+	if (!is_open())
 		return false;
-	}
 
 	size_ = tellg() / sizeof(BookEntry);
 
@@ -64,12 +60,10 @@ void Book::binary_search(const Key key) {
 		seekg(mid * sizeof(BookEntry), std::ios_base::beg);
 		read(reinterpret_cast<char*>(&entry), sizeof(entry));
 
-		if (key <= entry.key) {
+		if (key <= entry.key)
 			high = mid;
-		}
-		else {
+		else
 			low = mid + 1;
-		}
 	}
 
 	assert(low == high);
@@ -82,16 +76,14 @@ Key Book::bookKey(const Position& pos) {
 	Bitboard bb = pos.occupiedBB();
 
 	while (bb.isNot0()) {
-		const Square sq = bb.firstOneFromI9();
+		const Square sq = bb.firstOneFromSQ11();
 		key ^= ZobPiece[pos.piece(sq)][sq];
 	}
 	const Hand hand = pos.hand(pos.turn());
-	for (HandPiece hp = HPawn; hp < HandPieceNum; ++hp) {
+	for (HandPiece hp = HPawn; hp < HandPieceNum; ++hp)
 		key ^= ZobHand[hp][hand.numOf(hp)];
-	}
-	if (pos.turn() == White) {
+	if (pos.turn() == White)
 		key ^= ZobTurn;
-	}
 	return key;
 }
 
@@ -101,12 +93,11 @@ std::tuple<Move, Score> Book::probe(const Position& pos, const std::string& fNam
 	u32 sum = 0;
 	Move move = Move::moveNone();
 	const Key key = bookKey(pos);
-	const Score min_book_score = static_cast<Score>(static_cast<int>(pos.searcher()->options["Min_Book_Score"]));
+	const Score min_book_score = static_cast<Score>(static_cast<int>(Options["Min_Book_Score"]));
 	Score score = ScoreZero;
 
-	if (fileName_ != fName && !open(fName.c_str())) {
+	if (fileName_ != fName && !open(fName.c_str()))
 		return std::make_tuple(Move::moveNone(), ScoreNone);
-	}
 
 	binary_search(key);
 
@@ -130,13 +121,11 @@ std::tuple<Move, Score> Book::probe(const Position& pos, const std::string& fNam
 			else {
 				const Square from = tmp.from();
 				const PieceType ptFrom = pieceToPieceType(pos.piece(from));
-				const bool promo = (tmp.isPromotion() != 0);
-				if (promo) {
+				const bool promo = tmp.isPromotion();
+				if (promo)
 					move = makeCapturePromoteMove(ptFrom, from, to, pos);
-				}
-				else {
+				else
 					move = makeCaptureMove(ptFrom, from, to, pos);
-				}
 			}
 			score = entry.score;
 		}
@@ -192,7 +181,7 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 			std::cout << "!!! header only !!!" << std::endl;
 			return;
 		}
-		pos.set(DefaultStartPositionSFEN, pos.searcher()->threads.mainThread());
+		pos.set(DefaultStartPositionSFEN, Threads.main());
 		StateStackPtr SetUpStates = StateStackPtr(new std::stack<StateInfo>());
 		while (!line.empty()) {
 			const std::string moveStrCSA = line.substr(0, 6);
@@ -214,10 +203,8 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 					{
 						if (it->fromToPro == move.proFromAndTo()) {
 							++it->count;
-							if (it->count < 1) {
-								// 数えられる数の上限を超えたので元に戻す。
-								--it->count;
-							}
+							if (it->count < 1)
+								--it->count; // 数えられる数の上限を超えたので元に戻す。
 							isFind = true;
 						}
 					}
@@ -229,13 +216,13 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 
 					std::istringstream ssCmd("byoyomi 1000");
 					go(pos, ssCmd);
-					pos.searcher()->threads.waitForThinkFinished();
+					Threads.main()->wait_for_search_finished();
 
 					pos.undoMove(move);
 					SetUpStates->pop();
 
 					// doMove してから search してるので点数が反転しているので直す。
-					const Score score = -pos.csearcher()->rootMoves[0].score_;
+                    const Score score = -pos.thisThread()->rootMoves[0].score;//-Search::RootMoves[0].score;
 #else
 					const Score score = ScoreZero;
 #endif
@@ -278,9 +265,8 @@ void makeBook(Position& pos, std::istringstream& ssCmd) {
 
 	std::ofstream ofs("book.bin", std::ios::binary);
 	for (auto& elem : bookMap) {
-		for (auto& elel : elem.second) {
+		for (auto& elel : elem.second)
 			ofs.write(reinterpret_cast<char*>(&(elel)), sizeof(BookEntry));
-		}
 	}
 
 	std::cout << "book making was done" << std::endl;

@@ -11,6 +11,7 @@
 #include <memory>
 
 class Position;
+class Thread;
 
 enum RepetitionType {
 	NotRepetition, RepetitionDraw, RepetitionWin, RepetitionLose,
@@ -62,21 +63,20 @@ struct StateInfo : public StateInfoMin {
 using StateStackPtr = std::unique_ptr<std::stack<StateInfo> >;
 
 class Move;
-struct Thread;
-struct Searcher;
+
+//struct Searcher;
 
 class Position {
 public:
 	Position() {}
-	explicit Position(Searcher* s) : searcher_(s) {}
+	//explicit Position(){}
 	Position(const Position& pos) { *this = pos; }
 	Position(const Position& pos, Thread* th) {
 		*this = pos;
 		thisThread_ = th;
 	}
-	Position(const std::string& sfen, Thread* th, Searcher* s) {
+	Position(const std::string& sfen, Thread* th) {
 		set(sfen, th);
-		setSearcher(s);
 	}
 
 	Position& operator = (const Position& pos);
@@ -150,7 +150,7 @@ public:
 	Score materialDiff() const { return st_->material - st_->previous->material; }
 
 	FORCE_INLINE Square kingSquare(const Color c) const {
-		assert(kingSquare_[c] == bbOf(King, c).constFirstOneFromI9());
+		assert(kingSquare_[c] == bbOf(King, c).constFirstOneFromSQ11());
 		return kingSquare_[c];
 	}
 
@@ -255,9 +255,9 @@ public:
 	const int* cplist1() const { return &evalList_.list1[0]; }
 	const ChangedLists& cl() const { return st_->cl; }
 
-	const Searcher* csearcher() const { return searcher_; }
-	Searcher* searcher() const { return searcher_; }
-	void setSearcher(Searcher* s) { searcher_ = s; }
+	//const Searcher* csearcher() const { return searcher_; }
+	//Searcher* searcher() const { return searcher_; }
+	//void setSearcher(Searcher* s) { searcher_ = s; }
 
 #if !defined NDEBUG
 	// for debug
@@ -278,7 +278,7 @@ public:
 		assert(pt < Gold);
 		return PromotePieceScore[pt];
 	}
-
+    Piece moved_piece(const Move m) const;
 private:
 	void clear();
 	void setPiece(const Piece piece, const Square sq) {
@@ -325,7 +325,7 @@ private:
 			(bbOf(Rook, Dragon) & rookAttackToEdge(ksq)) | (bbOf(Bishop, Horse) & bishopAttackToEdge(ksq));
 
 		while (pinners.isNot0()) {
-			const Square sq = pinners.firstOneFromI9();
+			const Square sq = pinners.firstOneFromSQ11();
 			// pin する遠隔駒と玉の間にある駒の位置の Bitboard
 			const Bitboard between = betweenBB(sq, ksq) & occupiedBB();
 
@@ -379,7 +379,7 @@ private:
 	Thread* thisThread_;
 	u64 nodes_;
 
-	Searcher* searcher_;
+	//Searcher* searcher_;
 
 	static Key zobrist_[PieceTypeNum][SquareNum][ColorNum];
 	static const Key zobTurn_ = 1;

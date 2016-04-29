@@ -98,7 +98,7 @@ inline void lowerDimension(EvaluaterBase<std::array<std::atomic<float>, 2>,
 #ifdef _OPENMP
 #pragma omp for
 #endif
-		for (int ksq = I9; ksq < SquareNum; ++ksq) {
+		for (int ksq = SQ11; ksq < SquareNum; ++ksq) {
 			std::pair<ptrdiff_t, int> indices[base.KPPIndicesMax];
 			for (int i = 0; i < fe_end; ++i) {
 				for (int j = 0; j < fe_end; ++j) {
@@ -113,9 +113,9 @@ inline void lowerDimension(EvaluaterBase<std::array<std::atomic<float>, 2>,
 #ifdef _OPENMP
 #pragma omp for
 #endif
-		for (int ksq0 = I9; ksq0 < SquareNum; ++ksq0) {
+		for (int ksq0 = SQ11; ksq0 < SquareNum; ++ksq0) {
 			std::pair<ptrdiff_t, int> indices[base.KKPIndicesMax];
-			for (Square ksq1 = I9; ksq1 < SquareNum; ++ksq1) {
+			for (Square ksq1 = SQ11; ksq1 < SquareNum; ++ksq1) {
 				for (int i = 0; i < fe_end; ++i) {
 					base.kkpIndices(indices, static_cast<Square>(ksq0), ksq1, i);
 					FOO(indices, base.oneArrayKKP, raw.kkp_raw[ksq0][ksq1][i]);
@@ -128,9 +128,9 @@ inline void lowerDimension(EvaluaterBase<std::array<std::atomic<float>, 2>,
 #ifdef _OPENMP
 #pragma omp for
 #endif
-		for (int ksq0 = I9; ksq0 < SquareNum; ++ksq0) {
+		for (int ksq0 = SQ11; ksq0 < SquareNum; ++ksq0) {
 			std::pair<ptrdiff_t, int> indices[base.KKIndicesMax];
-			for (Square ksq1 = I9; ksq1 < SquareNum; ++ksq1) {
+			for (Square ksq1 = SQ11; ksq1 < SquareNum; ++ksq1) {
 				base.kkIndices(indices, static_cast<Square>(ksq0), ksq1);
 				FOO(indices, base.oneArrayKK, raw.kk_raw[ksq0][ksq1]);
 			}
@@ -481,9 +481,8 @@ private:
 					ss[0].staticEvalRaw.p[0][0] = ss[1].staticEvalRaw.p[0][0] = ScoreNotEvaluated;
 					const Score recordScore = (rootColor == pos.turn() ? evaluate(pos, ss+1) : -evaluate(pos, ss+1));
 					PRINT_PV(std::cout << ", score: " << recordScore << std::endl);
-					for (int jj = recordPVIndex - 1; 0 <= jj; --jj) {
+					for (int jj = recordPVIndex - 1; 0 <= jj; --jj)
 						pos.undoMove(bmd.pvBuffer[jj]);
-					}
 
 					std::array<double, 2> sum_dT = {{0.0, 0.0}};
 					for (int otherPVIndex = recordPVIndex + 1; otherPVIndex < static_cast<int>(bmd.pvBuffer.size()); ++otherPVIndex) {
@@ -503,9 +502,8 @@ private:
 						dT[0] = -dT[0];
 						dT[1] = (pos.turn() == rootColor ? -dT[1] : dT[1]);
 						parse2Data.params.incParam(pos, dT);
-						for (int jj = otherPVIndex - 1; !bmd.pvBuffer[jj].isNone(); --jj) {
+						for (int jj = otherPVIndex - 1; !bmd.pvBuffer[jj].isNone(); --jj)
 							pos.undoMove(bmd.pvBuffer[jj]);
-						}
 					}
 
 					for (int jj = 0; jj < recordPVIndex; ++jj) {
@@ -514,9 +512,8 @@ private:
 					}
 					sum_dT[1] = (pos.turn() == rootColor ? sum_dT[1] : -sum_dT[1]);
 					parse2Data.params.incParam(pos, sum_dT);
-					for (int jj = recordPVIndex - 1; 0 <= jj; --jj) {
+					for (int jj = recordPVIndex - 1; 0 <= jj; --jj)
 						pos.undoMove(bmd.pvBuffer[jj]);
-					}
 				}
 				setUpStates->push(StateInfo());
 				pos.doMove(bmd.move, setUpStates->top());
@@ -536,9 +533,8 @@ private:
 			for (auto& thread : threads)
 				thread.join();
 
-			for (auto& parse2 : parse2Datum_) {
+			for (auto& parse2 : parse2Datum_)
 				parse2Data_.params += parse2.params;
-			}
 			parse2EvalBase_.clear();
 			lowerDimension(parse2EvalBase_, parse2Data_.params);
 			setUpdateMask(step);
@@ -551,10 +547,10 @@ private:
 		}
 	}
 	void print() {
-		for (Rank r = Rank9; r < RankNum; ++r) {
-			for (File f = FileA; FileI <= f; --f) {
+		for (Rank r = Rank1; r < RankNum; ++r) {
+			for (File f = File9; File1 <= f; --f) {
 				const Square sq = makeSquare(f, r);
-				printf("%5d", Evaluater::KPP[B2][f_gold + C2][f_gold + sq][0]);
+				printf("%5d", Evaluater::KPP[SQ88][f_gold + SQ78][f_gold + sq][0]);
 			}
 			printf("\n");
 		}

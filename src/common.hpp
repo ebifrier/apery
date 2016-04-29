@@ -31,6 +31,7 @@
 #include <cmath>
 #include <cstddef>
 //#include <boost/align/aligned_alloc.hpp>
+#include <bitset>
 
 #if defined HAVE_BMI2
 #include <immintrin.h>
@@ -142,9 +143,8 @@ FORCE_INLINE int firstOneFromLSB(const u64 b) {
 // 超絶遅いコードなので後で書き換えること。
 FORCE_INLINE int firstOneFromMSB(const u64 b) {
 	for (int i = 63; 0 <= i; --i) {
-		if (b >> i) {
+		if (b >> i)
 			return 63 - i;
-		}
 	}
 	return 0;
 }
@@ -175,9 +175,8 @@ inline std::string putb(const T value, const int msb = sizeof(T)*8 - 1, const in
 	std::string str;
 	u64 tempValue = (static_cast<u64>(value) >> lsb);
 
-	for (int length = msb - lsb + 1; length; --length) {
+	for (int length = msb - lsb + 1; length; --length)
 		str += ((tempValue & (UINT64_C(1) << (length - 1))) ? "1" : "0");
-	}
 
 	return str;
 }
@@ -265,7 +264,7 @@ private:
 };
 
 // ミリ秒単位の時間を表すクラス
-class Time {
+class Time_ {
 public:
 	void restart() { t_ = std::chrono::system_clock::now(); }
 	int elapsed() const {
@@ -273,8 +272,8 @@ public:
 		using std::chrono::milliseconds;
 		return static_cast<int>(duration_cast<milliseconds>(std::chrono::system_clock::now() - t_).count());
 	}
-	static Time currentTime() {
-		Time t;
+	static Time_ currentTime() {
+		Time_ t;
 		t.restart();
 		return t;
 	}
@@ -282,6 +281,13 @@ public:
 private:
 	std::chrono::time_point<std::chrono::system_clock> t_;
 };
+
+typedef std::chrono::milliseconds::rep TimePoint; // A value in milliseconds
+
+inline TimePoint now() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>
+    (std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 extern std::mt19937_64 g_randomTimeSeed;
 
@@ -320,5 +326,42 @@ template <typename T> inline void reverseEndian(T& r) {
 	}
 }
 #endif
+
+#ifdef _MSC_VER
+
+// Disable some silly and noisy warnings from MSVC compiler
+#pragma warning(disable: 4127) // Conditional expression is constant
+#pragma warning(disable: 4146) // Unary minus operator applied to unsigned type
+#pragma warning(disable: 4800) // Forcing value to bool 'true' or 'false'
+#pragma warning(disable: 4996) // Function _ftime() may be unsafe
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4521)
+#pragma warning(disable: 4522)
+
+// MSVC does not support <inttypes.h>
+typedef   signed __int8    int8_t;
+typedef unsigned __int8   uint8_t;
+typedef   signed __int16  int16_t;
+typedef unsigned __int16 uint16_t;
+typedef   signed __int32  int32_t;
+typedef unsigned __int32 uint32_t;
+typedef   signed __int64  int64_t;
+typedef unsigned __int64 uint64_t;
+
+#else
+#  include <inttypes.h>
+#endif
+
+inline int lsb(const u64 b) {
+  unsigned long idx;
+  _BitScanForward64(&idx, b);
+  return idx;
+}
+
+inline int msb(const u64 b) {
+  unsigned long idx;
+  _BitScanReverse64(&idx, b);
+  return idx;
+}
 
 #endif // #ifndef APERY_COMMON_HPP

@@ -10,35 +10,22 @@
 #include "benchmark.hpp"
 #include "learner.hpp"
 
+#include "timeManager.hpp"
+
+using namespace std;
+
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-const std::string MyName = "Godwhale_Apery-3.0.4";
 const int LoginNameMaxLength = 12;
-#elif defined(NDEBUG)
-const std::string MyName = "Apery_Twig_SDT3";
+const std::string MyName = "Godwhale_Apery-3.0.4";
+#else
+#ifdef NDEBUG
+const std::string MyName = "SILENT_MAJORITY";
 #else
 const std::string MyName = "Apery Debug Build";
 #endif
+#endif
 
-namespace {
-	void onThreads(Searcher* s, const USIOption&)      { s->threads.readUSIOptions(s); }
-	void onHashSize(Searcher* s, const USIOption& opt) { s->tt.setSize(opt); }
-	void onClearHash(Searcher* s, const USIOption&)    { s->tt.clear(); }
-	void onEvalDir(Searcher*, const USIOption& opt)    {
-		std::unique_ptr<Evaluater>(new Evaluater)->init(opt, true);
-	}
-}
-
-bool CaseInsensitiveLess::operator () (const std::string& s1, const std::string& s2) const {
-	for (size_t i = 0; i < s1.size() && i < s2.size(); ++i) {
-		const int c1 = tolower(s1[i]);
-		const int c2 = tolower(s2[i]);
-
-		if (c1 != c2) {
-			return c1 < c2;
-		}
-	}
-	return s1.size() < s2.size();
-}
+USI::OptionsMap Options; // Global object
 
 namespace {
 	// 論理的なコア数の取得
@@ -76,60 +63,73 @@ namespace {
 	const StringToPieceTypeCSA g_stringToPieceTypeCSA;
 }
 
-void OptionsMap::init(Searcher* s) {
-	(*this)["USI_Hash"]                    = USIOption(256, 1, 65536, onHashSize, s);
-	(*this)["Clear_Hash"]                  = USIOption(onClearHash, s);
-	(*this)["Book_File"]                   = USIOption("book/20150503/book.bin");
-	(*this)["Best_Book_Move"]              = USIOption(false);
-	(*this)["OwnBook"]                     = USIOption(true);
-	(*this)["Min_Book_Ply"]                = USIOption(SHRT_MAX, 0, SHRT_MAX);
-	(*this)["Max_Book_Ply"]                = USIOption(SHRT_MAX, 0, SHRT_MAX);
-	(*this)["Min_Book_Score"]              = USIOption(-180, -ScoreInfinite, ScoreInfinite);
-	(*this)["Eval_Dir"]                    = USIOption("20151105", onEvalDir);
-	(*this)["Write_Synthesized_Eval"]      = USIOption(false);
-	(*this)["USI_Ponder"]                  = USIOption(true);
-	(*this)["Byoyomi_Margin"]              = USIOption(500, 0, INT_MAX);
-	(*this)["MultiPV"]                     = USIOption(1, 1, MaxLegalMoves);
-	(*this)["Skill_Level"]                 = USIOption(20, 0, 20);
-	(*this)["Max_Random_Score_Diff"]       = USIOption(0, 0, ScoreMate0Ply);
-	(*this)["Max_Random_Score_Diff_Ply"]   = USIOption(40, 0, SHRT_MAX);
-	(*this)["Emergency_Move_Horizon"]      = USIOption(40, 0, 50);
-	(*this)["Emergency_Base_Time"]         = USIOption(200, 0, 30000);
-	(*this)["Emergency_Move_Time"]         = USIOption(70, 0, 5000);
-	(*this)["Slow_Mover"]                  = USIOption(100, 10, 1000);
-	(*this)["Minimum_Thinking_Time"]       = USIOption(1500, 0, INT_MAX);
-	(*this)["Max_Threads_per_Split_Point"] = USIOption(5, 4, 8, onThreads, s);
-	(*this)["Threads"]                     = USIOption(cpuCoreCount(), 1, MaxThreads, onThreads, s);
-	(*this)["Use_Sleeping_Threads"]        = USIOption(false);
-#if defined BISHOP_IN_DANGER
-	(*this)["Danger_Demerit_Score"]        = USIOption(700, SHRT_MIN, SHRT_MAX);
-#endif
+namespace USI {
+	void onThreads(const Option&)      { Threads.readUSIOptions(); }
+	void onHashSize(const Option& opt) { TT.resize(opt); }
+    void onClearHash(const Option&)    { Search::clear();}
+	void onEvalDir(const Option& opt)    {
+		std::unique_ptr<Evaluater>(new Evaluater)->init(opt, true);
+	}
+
+bool CaseInsensitiveLess::operator () (const std::string& s1, const std::string& s2) const {
+	for (size_t i = 0; i < s1.size() && i < s2.size(); ++i) {
+		const int c1 = tolower(s1[i]);
+		const int c2 = tolower(s2[i]);
+		if (c1 != c2)
+			return c1 < c2;
+	}
+	return s1.size() < s2.size();
 }
 
-USIOption::USIOption(const char* v, Fn* f, Searcher* s) :
-	type_("string"), min_(0), max_(0), onChange_(f), searcher_(s)
+void init(OptionsMap& o) {
+	o["USI_Hash"]                    = Option(256, 1, 65536, onHashSize);
+	o["Clear_Hash"]                  = Option(onClearHash);
+	o["Book_File"]                   = Option("book/20150503/book.bin");
+	o["Best_Book_Move"]              = Option(false);
+	o["OwnBook"]                     = Option(true);
+	o["Min_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
+	o["Max_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
+	o["Min_Book_Score"]              = Option(-180, -ScoreInfinite, ScoreInfinite);
+	o["Eval_Dir"]                    = Option("20151105", onEvalDir);
+	o["Write_Synthesized_Eval"]      = Option(false);
+	o["USI_Ponder"]                  = Option(true);
+	o["Byoyomi_Margin"]              = Option(500, 0, INT_MAX);
+	o["MultiPV"]                     = Option(1, 1, MaxLegalMoves);
+	o["Skill_Level"]                 = Option(20, 0, 20);
+	o["Max_Random_Score_Diff"]       = Option(0, 0, ScoreMate0Ply);
+	o["Max_Random_Score_Diff_Ply"]   = Option(40, 0, SHRT_MAX);
+	o["Slow_Mover"]                  = Option(100, 10, 1000);
+	o["Minimum_Thinking_Time"]       = Option(1500, 0, INT_MAX);
+	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
+    o["Move_Overhead"] = Option(30, 0, 5000);
+    o["nodestime"] = Option(0, 0, 10000);
+}
+
+Option::Option(const char* v, Fn* f) :
+	type_("string"), min_(0), max_(0), onChange_(f)
 {
 	defaultValue_ = currentValue_ = v;
 }
 
-USIOption::USIOption(const bool v, Fn* f, Searcher* s) :
-	type_("check"), min_(0), max_(0), onChange_(f), searcher_(s)
+Option::Option(const bool v, Fn* f) :
+	type_("check"), min_(0), max_(0), onChange_(f)
 {
 	defaultValue_ = currentValue_ = (v ? "true" : "false");
 }
 
-USIOption::USIOption(Fn* f, Searcher* s) :
-	type_("button"), min_(0), max_(0), onChange_(f), searcher_(s) {}
+Option::Option(Fn* f) :
+	type_("button"), min_(0), max_(0), onChange_(f)
+{}
 
-USIOption::USIOption(const int v, const int min, const int max, Fn* f, Searcher* s)
-	: type_("spin"), min_(min), max_(max), onChange_(f), searcher_(s)
+Option::Option(const int v, const int min, const int max, Fn* f)
+	: type_("spin"), min_(min), max_(max), onChange_(f)
 {
 	std::ostringstream ss;
 	ss << v;
 	defaultValue_ = currentValue_ = ss.str();
 }
 
-USIOption& USIOption::operator = (const std::string& v) {
+Option& Option::operator = (const std::string& v) {
 	assert(!type_.empty());
 
 	if ((type_ != "button" && v.empty())
@@ -139,53 +139,53 @@ USIOption& USIOption::operator = (const std::string& v) {
 		return *this;
 	}
 
-	if (type_ != "button") {
+	if (type_ != "button")
 		currentValue_ = v;
-	}
 
-	if (onChange_ != nullptr) {
-		(*onChange_)(searcher_, *this);
-	}
+	if (onChange_ != nullptr)
+		(*onChange_)(*this);
 
 	return *this;
 }
 
 std::ostream& operator << (std::ostream& os, const OptionsMap& om) {
 	for (auto& elem : om) {
-		const USIOption& o = elem.second;
+		const Option& o = elem.second;
 		os << "\noption name " << elem.first << " type " << o.type_;
-		if (o.type_ != "button") {
+		if (o.type_ != "button")
 			os << " default " << o.defaultValue_;
-		}
 
-		if (o.type_ == "spin") {
+		if (o.type_ == "spin")
 			os << " min " << o.min_ << " max " << o.max_;
-		}
 	}
 	return os;
 }
+
+} // namespace USI
 
 void go(const Position& pos, std::istringstream& ssCmd
 #if defined GODWHALE_CLUSTER_SLAVE
         , bool isRSI/*= false*/
 #endif
     ) {
-	LimitsType limits;
+	Search::LimitsType limits;
 	std::vector<Move> moves;
 	std::string token;
 #if defined GODWHALE_CLUSTER_SLAVE
     std::vector<Move> ignoreMoves;
 #endif
 
+    limits.startTime = now(); // As early as possible!
+
 	while (ssCmd >> token) {
-		if      (token == "ponder"     ) { limits.ponder = true; }
-		else if (token == "btime"      ) { ssCmd >> limits.time[Black]; }
-		else if (token == "wtime"      ) { ssCmd >> limits.time[White]; }
-		else if (token == "infinite"   ) { limits.infinite = true; }
+		if      (token == "ponder"     ) limits.ponder = true;
+		else if (token == "btime"      ) ssCmd >> limits.time[Black];
+		else if (token == "wtime"      ) ssCmd >> limits.time[White];
+		else if (token == "infinite"   ) limits.infinite = true;
 		else if (token == "byoyomi" || token == "movetime") {
 			// btime wtime の後に byoyomi が来る前提になっているので良くない。
 			ssCmd >> limits.moveTime;
-			if (limits.moveTime != 0) { limits.moveTime -= pos.searcher()->options["Byoyomi_Margin"]; }
+			if (limits.moveTime != 0) { limits.moveTime -= Options["Byoyomi_Margin"]; }
 		}
 		else if (token == "depth"      ) { ssCmd >> limits.depth; }
 		else if (token == "nodes"      ) { ssCmd >> limits.nodes; }
@@ -194,18 +194,19 @@ void go(const Position& pos, std::istringstream& ssCmd
 				moves.push_back(usiToMove(pos, token));
 		}
 #if defined GODWHALE_CLUSTER_SLAVE
-        else if (isRSI && token == "ignoremoves") {
-            while (ssCmd >> token)
-                ignoreMoves.push_back(usiToMove(pos, token));
-        }
+		else if (isRSI && token == "ignoremoves") {
+			while (ssCmd >> token)
+				ignoreMoves.push_back(usiToMove(pos, token));
+		}
 #endif
 	}
-	pos.searcher()->searchMoves = moves;
-	pos.searcher()->threads.startThinking(pos, limits, moves
+
+	Search::SearchMoves = moves;
+	Threads.startThinking(pos, limits, moves
 #if defined GODWHALE_CLUSTER_SLAVE
-                                          , ignoreMoves
+						  , ignoreMoves
 #endif
-                                          );
+						  );
 }
 
 #if defined LEARN
@@ -224,42 +225,35 @@ Move usiToMoveBody(const Position& pos, const std::string& moveStr) {
 	if (g_charToPieceUSI.isLegalChar(moveStr[0])) {
 		// drop
 		const PieceType ptTo = pieceToPieceType(g_charToPieceUSI.value(moveStr[0]));
-		if (moveStr[1] != '*') {
+		if (moveStr[1] != '*')
 			return Move::moveNone();
-		}
 		const File toFile = charUSIToFile(moveStr[2]);
 		const Rank toRank = charUSIToRank(moveStr[3]);
-		if (!isInSquare(toFile, toRank)) {
+		if (!isInSquare(toFile, toRank))
 			return Move::moveNone();
-		}
 		const Square to = makeSquare(toFile, toRank);
 		move = makeDropMove(ptTo, to);
 	}
 	else {
 		const File fromFile = charUSIToFile(moveStr[0]);
 		const Rank fromRank = charUSIToRank(moveStr[1]);
-		if (!isInSquare(fromFile, fromRank)) {
+		if (!isInSquare(fromFile, fromRank))
 			return Move::moveNone();
-		}
 		const Square from = makeSquare(fromFile, fromRank);
 		const File toFile = charUSIToFile(moveStr[2]);
 		const Rank toRank = charUSIToRank(moveStr[3]);
-		if (!isInSquare(toFile, toRank)) {
+		if (!isInSquare(toFile, toRank))
 			return Move::moveNone();
-		}
 		const Square to = makeSquare(toFile, toRank);
-		if (moveStr[4] == '\0') {
+		if (moveStr[4] == '\0')
 			move = makeNonPromoteMove<Capture>(pieceToPieceType(pos.piece(from)), from, to, pos);
-		}
 		else if (moveStr[4] == '+') {
-			if (moveStr[5] != '\0') {
+			if (moveStr[5] != '\0')
 				return Move::moveNone();
-			}
 			move = makePromoteMove<Capture>(pieceToPieceType(pos.piece(from)), from, to, pos);
 		}
-		else {
+		else
 			return Move::moveNone();
-		}
 	}
 
 	if (pos.moveIsPseudoLegal(move, true)
@@ -273,17 +267,15 @@ Move usiToMoveBody(const Position& pos, const std::string& moveStr) {
 // for debug
 Move usiToMoveDebug(const Position& pos, const std::string& moveStr) {
 	for (MoveList<LegalAll> ml(pos); !ml.end(); ++ml) {
-		if (moveStr == ml.move().toUSI()) {
+		if (moveStr == ml.move().toUSI())
 			return ml.move();
-		}
 	}
 	return Move::moveNone();
 }
 Move csaToMoveDebug(const Position& pos, const std::string& moveStr) {
 	for (MoveList<LegalAll> ml(pos); !ml.end(); ++ml) {
-		if (moveStr == ml.move().toCSA()) {
+		if (moveStr == ml.move().toCSA())
 			return ml.move();
-		}
 	}
 	return Move::moveNone();
 }
@@ -295,44 +287,36 @@ Move usiToMove(const Position& pos, const std::string& moveStr) {
 }
 
 Move csaToMoveBody(const Position& pos, const std::string& moveStr) {
-	if (moveStr.size() != 6) {
+	if (moveStr.size() != 6)
 		return Move::moveNone();
-	}
 	const File toFile = charCSAToFile(moveStr[2]);
 	const Rank toRank = charCSAToRank(moveStr[3]);
-	if (!isInSquare(toFile, toRank)) {
+	if (!isInSquare(toFile, toRank))
 		return Move::moveNone();
-	}
 	const Square to = makeSquare(toFile, toRank);
 	const std::string ptToString(moveStr.begin() + 4, moveStr.end());
-	if (!g_stringToPieceTypeCSA.isLegalString(ptToString)) {
+	if (!g_stringToPieceTypeCSA.isLegalString(ptToString))
 		return Move::moveNone();
-	}
 	const PieceType ptTo = g_stringToPieceTypeCSA.value(ptToString);
 	Move move;
-	if (moveStr[0] == '0' && moveStr[1] == '0') {
+	if (moveStr[0] == '0' && moveStr[1] == '0')
 		// drop
 		move = makeDropMove(ptTo, to);
-	}
 	else {
 		const File fromFile = charCSAToFile(moveStr[0]);
 		const Rank fromRank = charCSAToRank(moveStr[1]);
-		if (!isInSquare(fromFile, fromRank)) {
+		if (!isInSquare(fromFile, fromRank))
 			return Move::moveNone();
-		}
 		const Square from = makeSquare(fromFile, fromRank);
 		PieceType ptFrom = pieceToPieceType(pos.piece(from));
-		if (ptFrom == ptTo) {
+		if (ptFrom == ptTo)
 			// non promote
 			move = makeNonPromoteMove<Capture>(ptFrom, from, to, pos);
-		}
-		else if (ptFrom + PTPromote == ptTo) {
+		else if (ptFrom + PTPromote == ptTo)
 			// promote
 			move = makePromoteMove<Capture>(ptFrom, from, to, pos);
-		}
-		else {
+		else
 			return Move::moveNone();
-		}
 	}
 
 	if (pos.moveIsPseudoLegal(move, true)
@@ -383,8 +367,8 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 		return;
 	}
 
-	pos.set(sfen, pos.searcher()->threads.mainThread());
-	pos.searcher()->setUpStates = StateStackPtr(new std::stack<StateInfo>());
+	pos.set(sfen, Threads.main());
+	Search::SetUpStates = StateStackPtr(new std::stack<StateInfo>());
 
     // IDはsetが終わった後に設定しないと0クリアされてしまう
 #if defined GODWHALE_CLUSTER_SLAVE
@@ -400,14 +384,14 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 #endif
 		const Move move = usiToMove(pos, token);
 		if (move.isNone()) break;
-		pos.searcher()->setUpStates->push(StateInfo());
-		pos.doMove(move, pos.searcher()->setUpStates->top());
+		Search::SetUpStates->push(StateInfo());
+		pos.doMove(move, Search::SetUpStates->top());
 		++currentPly;
 	}
 	pos.setStartPosPly(currentPly);
 }
 
-void Searcher::setOption(std::istringstream& ssCmd) {
+void setOption(std::istringstream& ssCmd) {
 	std::string token;
 	std::string name;
 	std::string value;
@@ -416,22 +400,22 @@ void Searcher::setOption(std::istringstream& ssCmd) {
 
 	ssCmd >> name;
 	// " " が含まれた名前も扱う。
-	while (ssCmd >> token && token != "value") {
+	while (ssCmd >> token && token != "value")
 		name += " " + token;
-	}
 
 	ssCmd >> value;
 	// " " が含まれた値も扱う。
-	while (ssCmd >> token) {
+	while (ssCmd >> token)
 		value += " " + token;
-	}
 
-	if (!options.isLegalOption(name)) {
-		std::cout << "No such option: " << name << std::endl;
-	}
-	else {
-		options[name] = value;
-	}
+    if (!Options.count(name))
+      cout << "No such option: " << name << endl;
+
+    else if (value.empty()) // UCI buttons don't have a value
+      Options[name] = true;
+
+    else
+      Options[name] = value;
 }
 
 #if !defined MINIMUL
@@ -444,7 +428,7 @@ void measureGenerateMoves(const Position& pos) {
 	for (int i = 0; i < MaxLegalMoves; ++i) legalMoves[i].move = moveNone();
 	MoveStack* pms = &legalMoves[0];
 	const u64 num = 5000000;
-	Time t = Time::currentTime();
+    Time_ t = Time_::currentTime();
 	if (pos.inCheck()) {
 		for (u64 i = 0; i < num; ++i) {
 			pms = &legalMoves[0];
@@ -463,20 +447,18 @@ void measureGenerateMoves(const Position& pos) {
 	}
 	const int elapsed = t.elapsed();
 	std::cout << "elapsed = " << elapsed << " [msec]" << std::endl;
-	if (elapsed != 0) {
+	if (elapsed != 0)
 		std::cout << "times/s = " << num * 1000 / elapsed << " [times/sec]" << std::endl;
-	}
 	const ptrdiff_t count = pms - &legalMoves[0];
 	std::cout << "num of moves = " << count << std::endl;
-	for (int i = 0; i < count; ++i) {
+	for (int i = 0; i < count; ++i)
 		std::cout << legalMoves[i].move.toCSA() << ", ";
-	}
 	std::cout << std::endl;
 }
 #endif
 
-void Searcher::doUSICommandLoop(int argc, char* argv[]) {
-	Position pos(DefaultStartPositionSFEN, threads.mainThread(), thisptr);
+void USI::loop(int argc, char* argv[]) {
+	Position pos(DefaultStartPositionSFEN, Threads.main());
 
 	std::string cmd;
 	std::string token;
@@ -502,41 +484,37 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
 		ssCmd >> std::skipws >> token;
 
 		if (token == "quit" || token == "stop" || token == "ponderhit" || token == "gameover") {
-			if (token != "ponderhit" || signals.stopOnPonderHit) {
-				signals.stop = true;
-				threads.mainThread()->notifyOne();
+			if (token != "ponderhit" || Search::Signals.stopOnPonderhit) {
+              Search::Signals.stop = true;
+				Threads.main()->start_searching(true);
 			}
-			else {
-				limits.ponder = false;
-			}
-			if (token == "ponderhit" && limits.moveTime != 0) {
-				limits.moveTime += searchTimer.elapsed();
-			}
+			else
+				Search::Limits.ponder = false;
+			if (token == "ponderhit" && Search::Limits.moveTime != 0)
+              Search::Limits.moveTime += Time.elapsed();
 		}
 		else if (token == "usinewgame") {
-			tt.clear();
+            Search::clear();
+            Time.availableNodes = 0;
 #if defined INANIWA_SHIFT
 			inaniwaFlag = NotInaniwa;
 #endif
-#if defined BISHOP_IN_DANGER
-			bishopInDangerFlag = NotBishopInDanger;
-#endif
 			for (int i = 0; i < 100; ++i) g_randomTimeSeed(); // 最初は乱数に偏りがあるかも。少し回しておく。
 		}
-		else if (token == "usi"      ) { SYNCCOUT << "id name " << MyName
-												  << "\nid author Hiraoka Takuya"
-												  << "\n" << options
-												  << "\nusiok" << SYNCENDL; }
-		else if (token == "go"       ) { go(pos, ssCmd); }
-		else if (token == "isready"  ) { SYNCCOUT << "readyok" << SYNCENDL; }
-		else if (token == "position" ) { setPosition(pos, ssCmd); }
+		else if (token == "usi"      ) SYNCCOUT << "id name " << MyName
+												<< "\nid author Hiraoka Takuya , T. Romstad, M. Costalba, J. Kiiski, G. Linscott and more"
+												<< "\n" << Options
+												<< "\nusiok" << SYNCENDL;
+		else if (token == "go"       ) go(pos, ssCmd);
+		else if (token == "isready"  ) SYNCCOUT << "readyok" << SYNCENDL;
+		else if (token == "position" ) setPosition(pos, ssCmd);
+		else if (token == "setoption") setOption(ssCmd);
 #if defined GODWHALE_CLUSTER_SLAVE
-        else if (token == "xposition") { setPosition(pos, ssCmd, true); }
-        else if (token == "xgo")       { go(pos, ssCmd, true); }
-        else if (token == "xinfo")     { /* GUI用のコマンド。ここでは何もしない*/ }
-        else if (token == "xkeepalive"){ SYNCCOUT << "keepalive ok" << SYNCENDL; }
+        else if (token == "xposition")  setPosition(pos, ssCmd, true);
+        else if (token == "xgo")        go(pos, ssCmd, true);
+        else if (token == "xinfo")      { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xkeepalive") SYNCCOUT << "keepalive ok" << SYNCENDL;
 #endif
-		else if (token == "setoption") { setOption(ssCmd); }
 #if defined LEARN
 		else if (token == "l"        ) {
 			auto learner = std::unique_ptr<Learner>(new Learner);
@@ -549,17 +527,18 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
 #endif
 #if !defined MINIMUL
 		// 以下、デバッグ用
-		else if (token == "bench"    ) { benchmark(pos); }
-		else if (token == "d"        ) { pos.print(); }
-		else if (token == "s"        ) { measureGenerateMoves(pos); }
-		else if (token == "t"        ) { std::cout << pos.mateMoveIn1Ply().toCSA() << std::endl; }
-		else if (token == "b"        ) { makeBook(pos, ssCmd); }
+		else if (token == "bench"    ) benchmark(pos, ssCmd);
+		else if (token == "key"      ) SYNCCOUT << pos.getKey() << SYNCENDL;
+		else if (token == "d"        ) pos.print();
+		else if (token == "s"        ) measureGenerateMoves(pos);
+		else if (token == "t"        ) std::cout << pos.mateMoveIn1Ply().toCSA() << std::endl;
+		else if (token == "b"        ) makeBook(pos, ssCmd);
 #endif
-		else                           { SYNCCOUT << "unknown command: " << cmd << SYNCENDL; }
+		else                           SYNCCOUT << "unknown command: " << cmd << SYNCENDL;
 	} while (token != "quit" && argc == 1);
 
-	if (options["Write_Synthesized_Eval"])
-		Evaluater::writeSynthesized(options["Eval_Dir"]);
+	if (Options["Write_Synthesized_Eval"])
+		Evaluater::writeSynthesized(Options["Eval_Dir"]);
 
-	threads.waitForThinkFinished();
+	Threads.main()->wait_for_search_finished();
 }
