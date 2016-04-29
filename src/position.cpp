@@ -1503,11 +1503,11 @@ std::string Position::toUSI() const
     std::string usi;
 
     // 盤面
-    for (Rank rank = Rank9; rank <= Rank1; ++rank) {
-        if (rank != Rank9) usi += "/";
+    for (Rank rank = Rank1; rank <= Rank9; ++rank) {
+        if (rank != Rank1) usi += "/";
 
         int spaceCount = 0;
-        for (File file = File1; file >= File9; --file) {
+        for (File file = File9; file >= File1; --file) {
             auto pc = piece(makeSquare(file, rank));
 
             if (pc == Empty) {
