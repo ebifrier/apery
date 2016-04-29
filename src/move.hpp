@@ -87,6 +87,7 @@ public:
 	std::string promoteFlagToStringUSI() const { return (this->isPromotion() ? "+" : ""); }
 	std::string toUSI() const;
 	std::string toCSA() const;
+    std::string toKIF() const;
 
 	static Move moveNone() { return Move(MoveNone); }
 	static Move moveNull() { return Move(MoveNull); }
