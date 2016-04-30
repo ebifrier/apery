@@ -214,6 +214,9 @@ inline Move move16toMove(const Move move, const Position& pos) {
 
 #define MOVE_NONE Move::moveNone()
 #define MOVE_NULL Move::moveNull()
+#if defined GODWHALE_CLUSTER_MASTER
+#define MOVE_OTHER Move::moveOther()
+#endif
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
