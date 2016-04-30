@@ -331,7 +331,11 @@ std::string pvInfoToUSI(Position& pos, const Depth depth, const Score alpha, con
         if (ss.rdbuf()->in_avail()) // Not at first line
             ss << "\n";
 
-		ss << "info depth " << d / OnePly
+		ss << "info"
+#if defined GODWHALE_CLUSTER_SLAVE
+           << " id " << pos.id
+#endif
+           << " depth " << d / OnePly
 		   << " seldepth " << pos.thisThread()->maxPly
 		   << " score " << scoreToUSI(s);
 
@@ -342,9 +346,6 @@ std::string pvInfoToUSI(Position& pos, const Depth depth, const Score alpha, con
 		   << " nps " << (0 < t ? nodesSearched * 1000 / t : 0)
 		   << " time " << t
 		   << " multipv " << i + 1
-#if defined GODWHALE_CLUSTER_SLAVE
-           << " id " << pos.id
-#endif
 		   << " pv ";
 
 		for (Move m : rootMoves[i].pv)
@@ -565,10 +566,20 @@ finalize:
 
     previousScore = bestThread->rootMoves[0].score;
 
-	if (nyugyokuWin)
-		SYNCCOUT << "bestmove win" << SYNCENDL;
-	else if (rootMoves[0].pv[0].isNone())
-		SYNCCOUT << "bestmove resign" << SYNCENDL;
+    if (nyugyokuWin) {
+#if defined GODWHALE_CLUSTER_SLAVE
+        SYNCCOUT << "bestmove id " << pos.id << " win" << SYNCENDL;
+#else
+        SYNCCOUT << "bestmove win" << SYNCENDL;
+#endif
+    }
+    else if (rootMoves[0].pv[0].isNone()) {
+#if defined GODWHALE_CLUSTER_SLAVE
+        SYNCCOUT << "bestmove id " << pos.id << " resign" << SYNCENDL;
+#else
+        SYNCCOUT << "bestmove resign" << SYNCENDL;
+#endif
+    }
 
     else
     {
@@ -576,7 +587,12 @@ finalize:
         SYNCCOUT << pvInfoToUSI(bestThread->rootPos, bestThread->completedDepth, -ScoreInfinite, ScoreInfinite) << SYNCENDL;
 
 
-        SYNCCOUT << "bestmove " << bestThread->rootMoves[0].pv[0].toUSI();
+        SYNCCOUT << "bestmove "
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << "id " << pos.id << " "
+#endif
+                 << bestThread->rootMoves[0].pv[0].toUSI();
+
         if (bestThread->rootMoves[0].pv.size() > 1 || bestThread->rootMoves[0].extract_ponder_from_tt(pos))
             std::cout << " ponder " << bestThread->rootMoves[0].pv[1].toUSI();
         
@@ -633,7 +649,11 @@ void Thread::search() {
 	// 指し手が無ければ負け
 	if (rootMoves.empty()) {
 		rootMoves.push_back(RootMove(Move::moveNone()));
-		SYNCCOUT << "info depth 0 score "
+		SYNCCOUT << "info"
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << " id " << rootPos.id
+#endif
+                 << " depth 0 score "
 				 << scoreToUSI(-ScoreMate0Ply)
 				 << SYNCENDL;
 
@@ -743,8 +763,13 @@ void Thread::search() {
 
             if (Signals.stop)
             {
-              SYNCCOUT << "info nodes " << Threads.nodes_searched()
-                << " time " << Time.elapsed() << SYNCENDL;
+              SYNCCOUT << "info"
+#if defined GODWHALE_CLUSTER_SLAVE
+                       << " id " << rootPos.id
+#endif
+                       << " nodes " << Threads.nodes_searched()
+                       << " time " << Time.elapsed()
+                       << SYNCENDL;
               lastInfoTime = Time.elapsed();
             }
 
