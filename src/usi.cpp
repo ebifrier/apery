@@ -16,7 +16,7 @@ using namespace std;
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
 const int LoginNameMaxLength = 12;
-const std::string MyName = "Godwhale_Apery-3.0.5";
+const std::string MyName = "Godwhale_Apery-3.0.6";
 #else
 #ifdef NDEBUG
 const std::string MyName = "SILENT_MAJORITY";
@@ -513,6 +513,7 @@ void USI::loop(int argc, char* argv[]) {
         else if (token == "xposition")  setPosition(pos, ssCmd, true);
         else if (token == "xgo")        go(pos, ssCmd, true);
         else if (token == "xinfo")      { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xmove")      { /* GUI用のコマンド。ここでは何もしない*/ }
         else if (token == "xkeepalive") SYNCCOUT << "keepalive ok" << SYNCENDL;
 #endif
 #if defined LEARN
