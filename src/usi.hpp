@@ -53,7 +53,7 @@ private:
     //Searcher* searcher_;
 };
 
-void init(OptionsMap&);
+void init(OptionsMap&, int threads=-1);
 void loop(int argc, char* argv[]);
 
 } // namespace USI

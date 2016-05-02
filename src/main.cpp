@@ -61,18 +61,17 @@ int main(int argc, char* argv[]) {
         Position::initZobrist();
         Search::init();
 
-        USI::init(Options);
-
-        // Threads.initの前にスレッド数を設定する必要がある
+        auto threads = -1;
         if (argc > 3) {
             auto loginName = argv[3];
             validateLoginName(loginName);
             Options["Login_Name"] = USI::Option(loginName);
             if (argc > 4) {
-                Options["Threads"] = std::stoi(argv[4]);
+                threads = std::stoi(argv[4]);
             }
         }
 
+        USI::init(Options, threads);
         Threads.init();
         TT.resize(Options["Hash"]);
 

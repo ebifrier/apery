@@ -16,7 +16,7 @@ using namespace std;
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
 const int LoginNameMaxLength = 12;
-const std::string MyName = "Godwhale_Apery-3.0.7";
+const std::string MyName = "Godwhale_Apery-3.0.8";
 #else
 #ifdef NDEBUG
 const std::string MyName = "SILENT_MAJORITY";
@@ -81,7 +81,9 @@ bool CaseInsensitiveLess::operator () (const std::string& s1, const std::string&
 	return s1.size() < s2.size();
 }
 
-void init(OptionsMap& o) {
+void init(OptionsMap& o, int threads/*=-1*/) {
+    if (threads <= 0) threads = cpuCoreCount();
+
 	o["USI_Hash"]                    = Option(256, 1, 65536, onHashSize);
 	o["Clear_Hash"]                  = Option(onClearHash);
 	o["Book_File"]                   = Option("book/20150503/book.bin");
@@ -100,7 +102,7 @@ void init(OptionsMap& o) {
 	o["Max_Random_Score_Diff_Ply"]   = Option(40, 0, SHRT_MAX);
 	o["Slow_Mover"]                  = Option(100, 10, 1000);
 	o["Minimum_Thinking_Time"]       = Option(1500, 0, INT_MAX);
-	o["Threads"]                     = Option(cpuCoreCount(), 1, 128, onThreads);
+	o["Threads"]                     = Option(threads, 1, 128, onThreads);
     o["Move_Overhead"] = Option(30, 0, 5000);
     o["nodestime"] = Option(0, 0, 10000);
 }
