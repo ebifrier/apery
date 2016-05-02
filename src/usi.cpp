@@ -16,7 +16,7 @@ using namespace std;
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
 const int LoginNameMaxLength = 12;
-const std::string MyName = "Godwhale_Apery-3.0.6";
+const std::string MyName = "Godwhale_Apery-3.0.7";
 #else
 #ifdef NDEBUG
 const std::string MyName = "SILENT_MAJORITY";
