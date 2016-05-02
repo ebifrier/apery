@@ -62,12 +62,8 @@ int main(int argc, char* argv[]) {
         Search::init();
 
         USI::init(Options);
-        Threads.init();
-        TT.resize(Options["Hash"]);
 
-        std::unique_ptr<Evaluater> e(new Evaluater);
-        e->init(Options["Eval_Dir"], true);
-
+        // Threads.initの前にスレッド数を設定する必要がある
         if (argc > 3) {
             auto loginName = argv[3];
             validateLoginName(loginName);
@@ -75,7 +71,15 @@ int main(int argc, char* argv[]) {
             if (argc > 4) {
                 Options["Threads"] = std::stoi(argv[4]);
             }
+        }
 
+        Threads.init();
+        TT.resize(Options["Hash"]);
+
+        std::unique_ptr<Evaluater> e(new Evaluater);
+        e->init(Options["Eval_Dir"], true);
+
+        if (argc > 3) {
             startGodwhaleIo(argv[1], argv[2]);
             USI::loop(1, argv);
             closeGodwhaleIo();
