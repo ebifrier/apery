@@ -15,8 +15,9 @@
 using namespace std;
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-const int LoginNameMaxLength = 12;
-const std::string MyName = "Godwhale_Apery-3.0.8";
+#include "../../src/g_version.hpp"
+const int LoginNameMaxLength = godwhale::cluster::LoginNameMaxLength;
+const std::string MyName = godwhale::cluster::SlaveName;
 #else
 #ifdef NDEBUG
 const std::string MyName = "SILENT_MAJORITY";
@@ -165,7 +166,7 @@ std::ostream& operator << (std::ostream& os, const OptionsMap& om) {
 
 } // namespace USI
 
-void go(const Position& pos, std::istringstream& ssCmd
+void go(const Position& pos, std::istream& ssCmd
 #if defined GODWHALE_CLUSTER_SLAVE
         , bool isRSI/*= false*/
 #endif
@@ -334,7 +335,7 @@ Move csaToMove(const Position& pos, const std::string& moveStr) {
 	return move;
 }
 
-void setPosition(Position& pos, std::istringstream& ssCmd
+void setPosition(Position& pos, std::istream& ssCmd
 #if defined GODWHALE_CLUSTER_SLAVE
                  , bool isRSI /*= false*/
 #endif
@@ -393,7 +394,7 @@ void setPosition(Position& pos, std::istringstream& ssCmd
 	pos.setStartPosPly(currentPly);
 }
 
-void setOption(std::istringstream& ssCmd) {
+void setOption(std::istream& ssCmd) {
 	std::string token;
 	std::string name;
 	std::string value;

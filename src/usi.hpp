@@ -60,7 +60,7 @@ void loop(int argc, char* argv[]);
 
 extern USI::OptionsMap Options;
 
-void go(const Position& pos, std::istringstream& ssCmd
+void go(const Position& pos, std::istream& ssCmd
 #if defined GODWHALE_CLUSTER_SLAVE
         , bool isRSI = false
 #endif
@@ -68,12 +68,12 @@ void go(const Position& pos, std::istringstream& ssCmd
 #if defined LEARN
 void go(const Position& pos, const Ply depth, const Move move);
 #endif
-void setPosition(Position& pos, std::istringstream& ssCmd
+void setPosition(Position& pos, std::istream& ssCmd
 #if defined GODWHALE_CLUSTER_SLAVE
                  , bool isRSI = false
 #endif
     );
-void setOption(std::istringstream& ssCmd);
+void setOption(std::istream& ssCmd);
 Move csaToMove(const Position& pos, const std::string& moveStr);
 Move usiToMove(const Position& pos, const std::string& moveStr);
 
