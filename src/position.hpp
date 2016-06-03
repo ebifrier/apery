@@ -259,10 +259,7 @@ public:
 	//Searcher* searcher() const { return searcher_; }
 	//void setSearcher(Searcher* s) { searcher_ = s; }
 
-#if !defined NDEBUG
-	// for debug
 	bool isOK() const;
-#endif
 
 	static void initZobrist();
 
@@ -341,9 +338,7 @@ private:
 		return result;
 	}
 
-#if !defined NDEBUG
 	int debugSetEvalList() const;
-#endif
 	void setEvalList() { evalList_.set(*this); }
 
 	Key computeBoardKey() const;
