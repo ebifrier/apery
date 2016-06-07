@@ -92,8 +92,10 @@ public:
 	static Move moveNone() { return Move(MoveNone); }
 	static Move moveNull() { return Move(MoveNull); }
 #if defined GODWHALE_CLUSTER_MASTER
-    static Move moveOther() { return Move(MoveNull); }
-    bool isOther() const    { return (value() == MoveNull); }
+    static Move moveOther() { return Move(MoveOther); }
+    static Move moveResign(){ return Move(MoveResign); }
+    bool isOther() const    { return (value() == MoveOther); }
+    bool isResign() const   { return (value() == MoveResign); }
 #endif
 	// 学習時に、正解の手のPV、その他の手のPVを MoveNone で区切りながら 1 次元配列に格納していく。
 	// 格納するその他のPVの最後に MovePVsEnd を格納する。それをフラグに次の指し手に遷移する。
@@ -103,6 +105,8 @@ public:
 	static const u32 PromoteFlag = 1 << 14;
 	static const u32 MoveNone    = 0;
 	static const u32 MoveNull    = 129;
+    static const u32 MoveOther   = 130;
+    static const u32 MoveResign  = 131;
 	static const u32 MovePVsEnd  = 1 << 15; // for learn
 
 private:
