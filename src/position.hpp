@@ -233,8 +233,8 @@ public:
 	}
 
     std::string toUSI() const;
-	void print() const;
-    void print(std::ostream& os) const;
+	std::string toCSA() const;
+    void print() const;
 
 	u64 nodesSearched() const          { return nodes_; }
 	void setNodesSearched(const u64 n) { nodes_ = n; }

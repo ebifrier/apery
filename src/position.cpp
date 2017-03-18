@@ -1545,25 +1545,29 @@ std::string Position::toUSI() const
     return (usi + " 1"); // 手数も追加
 }
 
-void Position::print() const {
-    print(std::cout);
-}
+std::string Position::toCSA() const {
+	std::ostringstream os;
 
-void Position::print(std::ostream &os) const {
-    os << "'  9  8  7  6  5  4  3  2  1" << std::endl;
+	os << "'  9  8  7  6  5  4  3  2  1" << std::endl;
 	int i = 0;
 	for (Rank r = Rank1; r < RankNum; ++r) {
 		++i;
-        os << "P" << i;
+		os << "P" << i;
 		for (File f = File9; File1 <= f; --f)
-            os << pieceToCharCSA(piece(makeSquare(f, r)));
+			os << pieceToCharCSA(piece(makeSquare(f, r)));
 		os << std::endl;
 	}
 	printHand(os, Black);
 	printHand(os, White);
-    os << (turn() == Black ? "+" : "-") << std::endl;
-    os << std::endl;
-    os << "key = " << getKey() << std::endl;
+	os << (turn() == Black ? "+" : "-") << std::endl;
+
+	return os.str();
+}
+
+void Position::print() const {
+	std::cout << toCSA();
+	std::cout << std::endl;
+	std::cout << "key = " << getKey() << std::endl;
 }
 
 bool Position::isOK() const {
