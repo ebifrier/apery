@@ -93,7 +93,7 @@ void init(OptionsMap& o, int threads/*=-1*/) {
 	o["Min_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
 	o["Max_Book_Ply"]                = Option(SHRT_MAX, 0, SHRT_MAX);
 	o["Min_Book_Score"]              = Option(-180, -ScoreInfinite, ScoreInfinite);
-	o["Eval_Dir"]                    = Option("20151105", onEvalDir);
+	o["Eval_Dir"]                    = Option("20161007", onEvalDir);
 	o["Write_Synthesized_Eval"]      = Option(false);
 	o["USI_Ponder"]                  = Option(true);
 	o["Byoyomi_Margin"]              = Option(500, 0, INT_MAX);
@@ -104,8 +104,8 @@ void init(OptionsMap& o, int threads/*=-1*/) {
 	o["Slow_Mover"]                  = Option(100, 10, 1000);
 	o["Minimum_Thinking_Time"]       = Option(1500, 0, INT_MAX);
 	o["Threads"]                     = Option(threads, 1, 128, onThreads);
-    o["Move_Overhead"] = Option(30, 0, 5000);
-    o["nodestime"] = Option(0, 0, 10000);
+    o["Move_Overhead"]               = Option(30, 0, 5000);
+    o["nodestime"]                   = Option(0, 0, 10000);
 }
 
 Option::Option(const char* v, Fn* f) :
