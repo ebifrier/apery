@@ -24,12 +24,28 @@
 #include "search.hpp"
 #include "thread.hpp"
 
+#if defined SHARED_KPP
+#include <boost/filesystem.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
+#endif
+
 KPPBoardIndexStartToPiece g_kppBoardIndexStartToPiece;
 
+#if !defined SHARED_KPP
 KPPType Evaluator::KPP[SquareNum][fe_end][fe_end];
+#endif
 KKPType Evaluator::KKP[SquareNum][SquareNum][fe_end];
 KKType  Evaluator::KK[SquareNum][SquareNum];
 EvaluateHashTable g_evalTable;
+
+#if defined SHARED_KPP
+typedef Evaluator::KPPType KPPEntry[fe_end][fe_end];
+KPPType (*Evaluator::KPP)[fe_end][fe_end];
+
+namespace ipc = boost::interprocess;
+static ipc::file_mapping MappedFile;
+static ipc::mapped_region MappedRegion;
+#endif
 
 const int kppArray[31] = {
     0,        f_pawn,   f_lance,  f_knight,
@@ -361,6 +377,25 @@ namespace {
     }
 }
 
+bool Evaluator::readSynthesizedKPP(const std::string& dirName) {
+#if !defined SHARED_KPP
+    {
+        std::ifstream ifs((addSlashIfNone(dirName) + "KPP_synthesized.bin").c_str(), std::ios::binary);
+        if (ifs) ifs.read(reinterpret_cast<char*>(KPP), sizeof(KPP));
+        else     return false;
+    }
+#else
+    auto binFileName = addSlashIfNone(dirName) + "KPP_synthesized.bin";
+    if (!boost::filesystem::exists(binFileName)) return false;
+
+    // MappedFileオブジェクトを作成します。
+    MappedFile = ipc::file_mapping(binFileName.c_str(), ipc::read_only);
+    MappedRegion = ipc::mapped_region(MappedFile, ipc::read_only);
+    KPP = (KPPEntry *)MappedRegion.get_address();
+    return true;
+#endif
+}
+
 // todo: 無名名前空間に入れる。
 Score evaluateUnUseDiff(const Position& pos) {
     int list0[EvalList::ListSize];
@@ -380,7 +415,7 @@ Score evaluateUnUseDiff(const Position& pos) {
             ++nlist;
         }
     };
-func(handB, HPawn  , f_hand_pawn  , e_hand_pawn  );
+    func(handB, HPawn  , f_hand_pawn  , e_hand_pawn  );
     func(handW, HPawn  , e_hand_pawn  , f_hand_pawn  );
     func(handB, HLance , f_hand_lance , e_hand_lance );
     func(handW, HLance , e_hand_lance , f_hand_lance );

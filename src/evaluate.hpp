@@ -921,7 +921,12 @@ using KKPType = std::array<s32, 2>;
 using KKType = std::array<s32, 2>;
 struct Evaluator : public EvaluatorBase<KPPType, KKPType, KKType> {
     using Base = EvaluatorBase<KPPType, KKPType, KKType>;
+#if defined SHARED_KPP
+    typedef KPPType KPPType;
+    static KPPType (*KPP)[fe_end][fe_end];
+#else
     static KPPType KPP[SquareNum][fe_end][fe_end];
+#endif
     static KKPType KKP[SquareNum][SquareNum][fe_end];
     static KKType KK[SquareNum][SquareNum];
 
@@ -1034,13 +1039,16 @@ struct Evaluator : public EvaluatorBase<KPPType, KKPType, KKType> {
         FOO(KKP);                               \
         FOO(KK);                                \
     }
+    static bool readSynthesizedKPP(const std::string& dirName);
     static bool readSynthesized(const std::string& dirName) {
 #define FOO(x) {                                                        \
             std::ifstream ifs((addSlashIfNone(dirName) + #x "_synthesized.bin").c_str(), std::ios::binary); \
             if (ifs) ifs.read(reinterpret_cast<char*>(x), sizeof(x));   \
             else     return false;                                      \
         }
-        ALL_SYNTHESIZED_EVAL;
+        readSynthesizedKPP(dirName);
+        FOO(KKP);
+        FOO(KK);
 #undef FOO
         return true;
     }

@@ -124,7 +124,7 @@ struct Searcher {
     STATIC OptionsMap options;
     STATIC EasyMoveManager easyMove;
 
-    STATIC void init();
+    STATIC void init(int threadCount = -1);
     STATIC void clear();
     template <NodeType NT, bool INCHECK>
     STATIC Score qsearch(Position& pos, SearchStack* ss, Score alpha, Score beta, const Depth depth);

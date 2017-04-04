@@ -361,7 +361,13 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
         handKey -= zobHand(hpTo, us);
         boardKey += zobrist(ptTo, to, us);
 
+#if defined GODWHALE_CLUSTER_MASTER
+        if (csearcher() != nullptr) {
+            prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+        }
+#else
         prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#endif
 
         const int handnum = hand(us).numOf(hpTo);
         const int listIndex = evalList_.squareHandToList[HandPieceToSquareHand[us][hpTo] + handnum];
@@ -435,7 +441,14 @@ void Position::doMove(const Move move, StateInfo& newSt, const CheckInfo& ci, co
 
             st_->material += (us == Black ? capturePieceScore(ptCaptured) : -capturePieceScore(ptCaptured));
         }
+
+#if defined GODWHALE_CLUSTER_MASTER
+        if (csearcher() != nullptr) {
+            prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+        }
+#else
         prefetch(csearcher()->tt.firstEntry(boardKey + handKey));
+#endif
         // Occupied は to, from の位置のビットを操作するよりも、
         // Black と White の or を取る方が速いはず。
         byTypeBB_[Occupied] = bbOf(Black) | bbOf(White);
@@ -1581,25 +1594,31 @@ void Position::initZobrist() {
 }
 
 void Position::print() const {
-    std::cout << "'  9  8  7  6  5  4  3  2  1" << std::endl;
-    int i = 0;
-    for (Rank r = Rank1; r < RankNum; ++r) {
-        ++i;
-        std::cout << "P" << i;
-        for (File f = File9; File1 <= f; --f)
-            std::cout << pieceToCharCSA(piece(makeSquare(f, r)));
-        std::cout << std::endl;
-    }
-    printHand(Black);
-    printHand(White);
-    std::cout << (turn() == Black ? "+" : "-") << std::endl;
+    std::cout << toCSA();
     std::cout << std::endl;
     std::cout << "key = " << getKey() << std::endl;
 }
 
-std::string Position::toSFEN(const Ply ply) const {
+std::string Position::toCSA() const {
+    std::ostringstream ss;
+
+    ss << "'  9  8  7  6  5  4  3  2  1" << std::endl;
+    int i = 0;
+    for (Rank r = Rank1; r < RankNum; ++r) {
+        ++i;
+        ss << "P" << i;
+        for (File f = File9; File1 <= f; --f)
+            ss << pieceToCharCSA(piece(makeSquare(f, r)));
+        ss << std::endl;
+    }
+    printHand(ss, Black);
+    printHand(ss, White);
+    ss << (turn() == Black ? "+" : "-") << std::endl;
+    return ss.str();
+}
+
+std::string Position::toUSI(const Ply ply) const {
     std::stringstream ss;
-    ss << "sfen ";
     int space = 0;
     for (Rank rank = Rank1; rank <= Rank9; ++rank) {
         for (File file = File9; file >= File1; --file) {
@@ -1644,6 +1663,10 @@ std::string Position::toSFEN(const Ply ply) const {
     return ss.str();
 }
 
+std::string Position::toSFEN(const Ply ply) const {
+    return ("sfen " + toUSI(ply));
+}
+
 HuffmanCodedPos Position::toHuffmanCodedPos() const {
     HuffmanCodedPos result;
     result.clear();
@@ -1678,7 +1701,6 @@ HuffmanCodedPos Position::toHuffmanCodedPos() const {
     return result;
 }
 
-#if !defined NDEBUG
 bool Position::isOK() const {
     static Key prevKey;
     const bool debugAll = true;
@@ -1799,14 +1821,11 @@ incorrect_position:
     print();
     return false;
 }
-#endif
 
-#if !defined NDEBUG
 int Position::debugSetEvalList() const {
     // not implement
     return 0;
 }
-#endif
 
 Key Position::computeBoardKey() const {
     Key result = 0;
@@ -1871,24 +1890,24 @@ RepetitionType Position::isDraw(const int checkMaxPly) const {
 }
 
 namespace {
-    void printHandPiece(const Position& pos, const HandPiece hp, const Color c, const std::string& str) {
+    void printHandPiece(const Position& pos, std::ostream& ss, const HandPiece hp, const Color c, const std::string& str) {
         if (pos.hand(c).numOf(hp)) {
             const char* sign = (c == Black ? "+" : "-");
-            std::cout << "P" << sign;
+            ss << "P" << sign;
             for (u32 i = 0; i < pos.hand(c).numOf(hp); ++i)
-                std::cout << "00" << str;
-            std::cout << std::endl;
+                ss << "00" << str;
+            ss << std::endl;
         }
     }
 }
-void Position::printHand(const Color c) const {
-    printHandPiece(*this, HPawn  , c, "FU");
-    printHandPiece(*this, HLance , c, "KY");
-    printHandPiece(*this, HKnight, c, "KE");
-    printHandPiece(*this, HSilver, c, "GI");
-    printHandPiece(*this, HGold  , c, "KI");
-    printHandPiece(*this, HBishop, c, "KA");
-    printHandPiece(*this, HRook  , c, "HI");
+void Position::printHand(std::ostream& ss, const Color c) const {
+    printHandPiece(*this, ss, HPawn  , c, "FU");
+    printHandPiece(*this, ss, HLance , c, "KY");
+    printHandPiece(*this, ss, HKnight, c, "KE");
+    printHandPiece(*this, ss, HSilver, c, "GI");
+    printHandPiece(*this, ss, HGold  , c, "KI");
+    printHandPiece(*this, ss, HBishop, c, "KA");
+    printHandPiece(*this, ss, HRook  , c, "HI");
 }
 
 Position& Position::operator = (const Position& pos) {

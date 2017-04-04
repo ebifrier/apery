@@ -45,12 +45,12 @@ EasyMoveManager Searcher::easyMove;
 Searcher* Searcher::thisptr;
 #endif
 
-void Searcher::init() {
+void Searcher::init(int threadCount/*= -1*/) {
 #if defined USE_GLOBAL
 #else
     thisptr = this;
 #endif
-    options.init(thisptr);
+    options.init(thisptr, threadCount);
     threads.init(thisptr);
     tt.resize(options["USI_Hash"]);
 }
@@ -296,7 +296,11 @@ std::string pvInfoToUSI(Position& pos, const size_t pvSize, const Depth depth, c
         if (ss.rdbuf()->in_avail()) // 空以外は真
             ss << "\n";
 
-        ss << "info depth " << d / OnePly
+        ss << "info"
+#if defined GODWHALE_CLUSTER_SLAVE
+           << (IsGodwhaleMode ? " id " + std::to_string(pos.id) : "")
+#endif
+           << " depth " << d / OnePly
            << " seldepth " << pos.thisThread()->maxPly
            << " multipv " << i + 1
            << " score " << (i == PVIdx ? scoreToUSI(s, alpha, beta) : scoreToUSI(s))
@@ -1434,7 +1438,11 @@ void MainThread::search() {
 #endif
     if (rootMoves.empty()) {
         rootMoves.push_back(RootMove(Move::moveNone()));
-        SYNCCOUT << "info depth 0 score "
+        SYNCCOUT << "info"
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << (IsGodwhaleMode ? " id " + std::to_string(rootPos.id) : "")
+#endif
+                 << " depth 0 score "
                  << scoreToUSI(-ScoreMate0Ply)
                  << SYNCENDL;
     }
@@ -1485,12 +1493,27 @@ finalize:
     SYNCCOUT << pvInfoToUSI(bestThread->rootPos, 1, bestThread->completedDepth, -ScoreInfinite, ScoreInfinite) << SYNCENDL;
 #endif
 
-    if (nyugyokuWin)
-        SYNCCOUT << "bestmove win" << SYNCENDL;
-    else if (!bestThread->rootMoves[0].pv[0])
-        SYNCCOUT << "bestmove resign" << SYNCENDL;
+    if (nyugyokuWin) {
+        SYNCCOUT << "bestmove"
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << (IsGodwhaleMode ? " id " + std::to_string(pos.id) : "")
+#endif
+                 << " win" << SYNCENDL;
+    }
+    else if (!bestThread->rootMoves[0].pv[0]) {
+        SYNCCOUT << "bestmove"
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << (IsGodwhaleMode ? " id " + std::to_string(pos.id) : "")
+#endif
+                 << " resign" << SYNCENDL;
+
+    }
     else {
-        SYNCCOUT << "bestmove " << bestThread->rootMoves[0].pv[0].toUSI();
+        SYNCCOUT << "bestmove"
+#if defined GODWHALE_CLUSTER_SLAVE
+                 << (IsGodwhaleMode ? " id " + std::to_string(pos.id) : "")
+#endif
+                 << " " << bestThread->rootMoves[0].pv[0].toUSI();
         if (bestThread->rootMoves[0].pv.size() > 1 || bestThread->rootMoves[0].extractPonderFromTT(pos))
             std::cout << " ponder " << bestThread->rootMoves[0].pv[1].toUSI();
         std::cout << SYNCENDL;

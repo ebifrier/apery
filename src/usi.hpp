@@ -25,6 +25,10 @@
 #include "common.hpp"
 #include "move.hpp"
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+extern bool IsGodwhaleMode;
+#endif
+
 const std::string DefaultStartPositionSFEN = "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
 
 struct OptionsMap;
@@ -67,18 +71,22 @@ struct CaseInsensitiveLess {
 
 struct OptionsMap : public std::map<std::string, USIOption, CaseInsensitiveLess> {
 public:
-    void init(Searcher* s);
+    void init(Searcher* s, int threadCount = -1);
     bool isLegalOption(const std::string name) {
         return this->find(name) != std::end(*this);
     }
 };
 
-void go(const Position& pos, std::istringstream& ssCmd);
+void go(const Position& pos, std::istream& ssCmd);
 #if defined LEARN
 void go(const Position& pos, const Ply depth, const Move move);
 void go(const Position& pos, const Ply depth);
 #endif
-void setPosition(Position& pos, std::istringstream& ssCmd);
+void setPosition(Position& pos, std::istream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+                 , bool isRSI = false
+#endif
+);
 bool setPosition(Position& pos, const HuffmanCodedPos& hcp);
 Move csaToMove(const Position& pos, const std::string& moveStr);
 Move usiToMove(const Position& pos, const std::string& moveStr);

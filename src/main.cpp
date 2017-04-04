@@ -28,6 +28,11 @@
 #include "tt.hpp"
 #include "search.hpp"
 
+#if defined GODWHALE_CLUSTER_SLAVE
+#include "godwhaleIo.hpp"
+#include "../../src/g_version.hpp"
+#endif
+
 #if defined FIND_MAGIC
 // Magic Bitboard の Magic Number を求める為のソフト
 int main() {
@@ -52,6 +57,61 @@ int main() {
 }
 
 #else
+static void validateLoginName(const std::string name) {
+    if (name.empty()) {
+        std::cerr << "The Login_Name is empty !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+  
+    if (name.length() > godwhale::cluster::LoginNameMaxLength) {
+        std::cerr << "The Login_Name is too long !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+  
+    if (!std::all_of(name.begin(), name.end(), [](char _) { return (isalnum(_) || _ == '_'); })) {
+        std::cerr << "The Login_Name '" << name << "' has invalid character !" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+// usage godwhale_apery host port name [threads]
+int main(int argc, char* argv[]) {
+    std::unique_ptr<Searcher> s;
+
+    try {
+        initTable();
+        Position::initZobrist();
+        HuffmanCodedPos::init();
+        s.reset(new Searcher);
+
+        int threads = -1;
+        if (argc > 3) {
+            auto loginName = argv[3];
+            validateLoginName(loginName);
+            s->options["Login_Name"] = USIOption(loginName);
+            if (argc > 4) {
+                threads = std::stoi(argv[4]);
+            }
+
+            IsGodwhaleMode = true;
+            startGodwhaleIo(argv[1], argv[2]);
+            s->init(threads);
+            s->doUSICommandLoop(1, argv);
+            closeGodwhaleIo();
+        }
+        else {
+            s->init();
+            s->doUSICommandLoop(argc, argv);
+        }
+    }
+    catch (std::exception &ex) {
+        std::cerr << "unhandled exception: " << ex.what() << std::endl;
+    }
+
+    if (s != nullptr) s->threads.exit();
+}
+
+/*#else
 // 将棋を指すソフト
 int main(int argc, char* argv[]) {
     initTable();
@@ -61,6 +121,6 @@ int main(int argc, char* argv[]) {
     s->init();
     s->doUSICommandLoop(argc, argv);
     s->threads.exit();
-}
+}*/
 
 #endif

@@ -41,6 +41,9 @@ struct LimitsType {
     bool useTimeManagement() const { return !(mate | moveTime | depth | nodes | infinite); }
 
     std::vector<Move> searchmoves;
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::vector<Move> ignoreMoves;
+#endif
     int time[ColorNum], inc[ColorNum], movesToGo, depth, moveTime, mate, infinite, ponder;
     s64 nodes;
     Timer startTime;

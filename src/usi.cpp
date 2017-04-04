@@ -1,4 +1,4 @@
-/*
+﻿/*
   Apery, a USI shogi playing engine derived from Stockfish, a UCI chess playing engine.
   Copyright (C) 2004-2008 Tord Romstad (Glaurung author)
   Copyright (C) 2008-2015 Marco Costalba, Joona Kiiski, Tord Romstad
@@ -30,6 +30,11 @@
 #include "thread.hpp"
 #include "benchmark.hpp"
 #include "learner.hpp"
+
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+#include "../../src/g_version.hpp"
+bool IsGodwhaleMode = false;
+#endif
 
 namespace {
     void onThreads(Searcher* s, const USIOption&)      { s->threads.readUSIOptions(s); }
@@ -83,7 +88,9 @@ namespace {
     const StringToPieceTypeCSA g_stringToPieceTypeCSA;
 }
 
-void OptionsMap::init(Searcher* s) {
+void OptionsMap::init(Searcher* s, int threadCount/*=-1*/) {
+    if (threadCount <= 0) threadCount = cpuCoreCount();
+
     const int MaxHashMB = 1024 * 1024;
     (*this)["USI_Hash"]                    = USIOption(256, 1, MaxHashMB, onHashSize, s);
     (*this)["Clear_Hash"]                  = USIOption(onClearHash, s);
@@ -107,8 +114,10 @@ void OptionsMap::init(Searcher* s) {
     (*this)["Draw_Ply"]                    = USIOption(256, 1, INT_MAX);
     (*this)["Move_Overhead"]               = USIOption(30, 0, 5000);
     (*this)["Minimum_Thinking_Time"]       = USIOption(20, 0, INT_MAX);
-    (*this)["Threads"]                     = USIOption(cpuCoreCount(), 1, MaxThreads, onThreads, s);
-#ifdef NDEBUG
+    (*this)["Threads"]                     = USIOption(threadCount, 1, MaxThreads, onThreads, s);
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+    (*this)["Engine_Name"]                 = USIOption(godwhale::cluster::SlaveName.c_str());
+#elif defined NDEBUG
     (*this)["Engine_Name"]                 = USIOption("Apery");
 #else
     (*this)["Engine_Name"]                 = USIOption("Apery Debug Build");
@@ -170,7 +179,7 @@ std::ostream& operator << (std::ostream& os, const OptionsMap& om) {
     return os;
 }
 
-void go(const Position& pos, std::istringstream& ssCmd) {
+void go(const Position& pos, std::istream& ssCmd) {
     LimitsType limits;
     std::string token;
 
@@ -191,6 +200,12 @@ void go(const Position& pos, std::istringstream& ssCmd) {
             while (ssCmd >> token)
                 limits.searchmoves.push_back(usiToMove(pos, token));
         }
+#if defined GODWHALE_CLUSTER_SLAVE
+        else if (token == "ignoremoves") {
+            while (ssCmd >> token)
+                limits.ignoreMoves.push_back(usiToMove(pos, token));
+        }
+#endif
     }
     if      (limits.moveTime != 0)
         limits.moveTime -= pos.searcher()->options["Byoyomi_Margin"];
@@ -922,9 +937,20 @@ Move csaToMove(const Position& pos, const std::string& moveStr) {
     return move;
 }
 
-void setPosition(Position& pos, std::istringstream& ssCmd) {
+void setPosition(Position& pos, std::istream& ssCmd
+#if defined GODWHALE_CLUSTER_SLAVE
+                 , bool isRSI /*= false*/
+#endif
+) {
     std::string token;
     std::string sfen;
+
+#if defined GODWHALE_CLUSTER_SLAVE
+    std::string id;
+    if (isRSI) {
+        ssCmd >> id;
+    }
+#endif
 
     ssCmd >> token;
 
@@ -933,7 +959,11 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
         ssCmd >> token; // "moves" が入力されるはず。
     }
     else if (token == "sfen") {
-        while (ssCmd >> token && token != "moves")
+        while (ssCmd >> token && token != "moves"
+#if defined GODWHALE_CLUSTER_SLAVE
+               && (!isRSI || token != "branch")
+#endif
+              )
             sfen += token + " ";
     }
     else
@@ -941,6 +971,13 @@ void setPosition(Position& pos, std::istringstream& ssCmd) {
 
     pos.set(sfen, pos.searcher()->threads.main());
     pos.searcher()->states = StateListPtr(new std::deque<StateInfo>(1));
+
+    // IDはsetが終わった後に設定しないと0クリアされてしまう
+#if defined GODWHALE_CLUSTER_SLAVE
+    if (!id.empty()) {
+        pos.id = std::stoi(id);
+    }
+#endif
 
     Ply currentPly = pos.gamePly();
     while (ssCmd >> token) {
@@ -1049,6 +1086,13 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
         }
         else if (token == "go"       ) go(pos, ssCmd);
         else if (token == "position" ) setPosition(pos, ssCmd);
+#if defined GODWHALE_CLUSTER_SLAVE
+        else if (token == "xgo")       go(pos, ssCmd);
+        else if (token == "xposition") setPosition(pos, ssCmd, true);
+        else if (token == "xinfo")     { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xmove")     { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "keepalive") SYNCCOUT << "keepalive ok" << SYNCENDL;
+#endif
         else if (token == "usinewgame"); // isready で準備は出来たので、対局開始時に特にする事はない。
         else if (token == "usi"      ) SYNCCOUT << "id name " << std::string(options["Engine_Name"])
                                                 << "\nid author Hiraoka Takuya"

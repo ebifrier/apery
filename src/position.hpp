@@ -346,6 +346,9 @@ public:
         return getKey() >> 1;
     }
     void print() const;
+    std::string toCSA() const;
+    std::string toUSI(const Ply ply) const;
+    std::string toUSI() const  { return toUSI(gamePly()); }
     std::string toSFEN(const Ply ply) const;
     std::string toSFEN() const { return toSFEN(gamePly()); }
 
@@ -374,10 +377,8 @@ public:
     Searcher* searcher() const { return searcher_; }
     void setSearcher(Searcher* s) { searcher_ = s; }
 
-#if !defined NDEBUG
     // for debug
     bool isOK() const;
-#endif
 
     static void initZobrist();
 
@@ -393,6 +394,10 @@ public:
         assert(pt < Gold);
         return PromotePieceScore[pt];
     }
+
+#if defined GODWHALE_CLUSTER_SLAVE
+    int id;
+#endif
 
 private:
     void clear();
@@ -456,16 +461,14 @@ private:
         return result;
     }
 
-#if !defined NDEBUG
     int debugSetEvalList() const;
-#endif
     void setEvalList() { evalList_.set(*this); }
 
     Key computeBoardKey() const;
     Key computeHandKey() const;
     Key computeKey() const { return computeBoardKey() + computeHandKey(); }
 
-    void printHand(const Color c) const;
+    void printHand(std::ostream& ss, const Color c) const;
 
     static Key zobrist(const PieceType pt, const Square sq, const Color c) { return zobrist_[pt][sq][c]; }
     static Key zobTurn()                                                   { return zobTurn_; }

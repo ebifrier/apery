@@ -116,8 +116,13 @@ void ThreadPool::startThinking(const Position& pos, const LimitsType& limits, St
     std::vector<RootMove> rootMoves;
 
     for (MoveList<Legal> ml(pos); !ml.end(); ++ml) {
-        if (limits.searchmoves.empty()
-            || std::find(std::begin(limits.searchmoves), std::end(limits.searchmoves), ml.move()) != std::end(limits.searchmoves))
+        if ((limits.searchmoves.empty()
+             || std::find(std::begin(limits.searchmoves), std::end(limits.searchmoves), ml.move()) != std::end(limits.searchmoves))
+#if defined(GODWHALE_CLUSTER_SLAVE)
+         && (limits.ignoreMoves.empty()
+             || std::find(std::begin(limits.ignoreMoves), std::end(limits.ignoreMoves), ml.move()) == std::end(limits.ignoreMoves))
+#endif
+            )
         {
             rootMoves.push_back(RootMove(ml.move()));
         }
