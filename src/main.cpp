@@ -29,8 +29,8 @@
 #include "search.hpp"
 
 #if defined GODWHALE_CLUSTER_SLAVE
+#include "version.hpp"
 #include "godwhaleIo.hpp"
-#include "../../src/g_version.hpp"
 #endif
 
 #if defined FIND_MAGIC
@@ -63,7 +63,7 @@ static void validateLoginName(const std::string name) {
         exit(EXIT_FAILURE);
     }
   
-    if (name.length() > godwhale::cluster::LoginNameMaxLength) {
+    if (name.length() > LoginNameMaxLength) {
         std::cerr << "The Login_Name is too long !" << std::endl;
         exit(EXIT_FAILURE);
     }

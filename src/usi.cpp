@@ -32,7 +32,7 @@
 #include "learner.hpp"
 
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-#include "../../src/g_version.hpp"
+#include "version.hpp"
 bool IsGodwhaleMode = false;
 #endif
 
@@ -116,7 +116,7 @@ void OptionsMap::init(Searcher* s, int threadCount/*=-1*/) {
     (*this)["Minimum_Thinking_Time"]       = USIOption(20, 0, INT_MAX);
     (*this)["Threads"]                     = USIOption(threadCount, 1, MaxThreads, onThreads, s);
 #if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
-    (*this)["Engine_Name"]                 = USIOption(godwhale::cluster::SlaveName.c_str());
+    (*this)["Engine_Name"]                 = USIOption(SlaveName.c_str());
 #elif defined NDEBUG
     (*this)["Engine_Name"]                 = USIOption("Apery");
 #else
@@ -1087,11 +1087,12 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
         else if (token == "go"       ) go(pos, ssCmd);
         else if (token == "position" ) setPosition(pos, ssCmd);
 #if defined GODWHALE_CLUSTER_SLAVE
-        else if (token == "xgo")       go(pos, ssCmd);
-        else if (token == "xposition") setPosition(pos, ssCmd, true);
-        else if (token == "xinfo")     { /* GUI用のコマンド。ここでは何もしない*/ }
-        else if (token == "xmove")     { /* GUI用のコマンド。ここでは何もしない*/ }
-        else if (token == "keepalive") SYNCCOUT << "keepalive ok" << SYNCENDL;
+        else if (token == "xgo")        go(pos, ssCmd);
+        else if (token == "xposition")  setPosition(pos, ssCmd, true);
+        else if (token == "xinfo")      { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xmove")      { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xgameinfo")  { /* GUI用のコマンド。ここでは何もしない*/ }
+        else if (token == "xkeepalive") SYNCCOUT << "xkeepalive ok" << SYNCENDL;
 #endif
         else if (token == "usinewgame"); // isready で準備は出来たので、対局開始時に特にする事はない。
         else if (token == "usi"      ) SYNCCOUT << "id name " << std::string(options["Engine_Name"])
