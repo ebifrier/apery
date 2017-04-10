@@ -160,14 +160,14 @@ extern KPPBoardIndexStartToPiece g_kppBoardIndexStartToPiece;
 
 template <typename Tl, typename Tr>
 inline std::array<Tl, 2> operator += (std::array<Tl, 2>& lhs, const std::array<Tr, 2>& rhs) {
-    lhs[0] += rhs[0];
-    lhs[1] += rhs[1];
+    lhs[0] = static_cast<Tl>(lhs[0] + rhs[0]);
+    lhs[1] = static_cast<Tl>(lhs[1] + rhs[1]);
     return lhs;
 }
 template <typename Tl, typename Tr>
 inline std::array<Tl, 2> operator -= (std::array<Tl, 2>& lhs, const std::array<Tr, 2>& rhs) {
-    lhs[0] -= rhs[0];
-    lhs[1] -= rhs[1];
+    lhs[0] = static_cast<Tl>(lhs[0] - rhs[0]);
+    lhs[1] = static_cast<Tl>(lhs[1] - rhs[1]);
     return lhs;
 }
 
@@ -1008,8 +1008,8 @@ struct Evaluator : public EvaluatorBase<KPPType, KKPType, KKType> {
                     EvaluatorBase<KPPType, KKPType, KKType>::kkIndices(indices, static_cast<Square>(ksq0), ksq1);
                     std::array<s64, 2> sum = {{}};
                     FOO(indices, Base::oneArrayKK, sum);
-                    KK[ksq0][ksq1][0] += sum[0] / 2;
-                    KK[ksq0][ksq1][1] += sum[1] / 2;
+                    KK[ksq0][ksq1][0] += static_cast<s32>(sum[0] / 2);
+                    KK[ksq0][ksq1][1] += static_cast<s32>(sum[1] / 2);
                 }
             }
         }

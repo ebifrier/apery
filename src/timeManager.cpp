@@ -41,8 +41,8 @@ namespace {
     }
 
     template <TimeType T> int remaining(const int myTime, const int movesToGo, const Ply ply, const int slowMover) {
-        const float TMaxRatio   = (T == OptimumTime ? 1 : MaxRatio);
-        const float TStealRatio = (T == OptimumTime ? 0 : StealRatio);
+        const double TMaxRatio   = (T == OptimumTime ? 1.0 : MaxRatio);
+        const double TStealRatio = (T == OptimumTime ? 0.0 : StealRatio);
 
         const double moveImportanceSlowed = moveImportance(ply) * slowMover / 100;
         double otherMoveImportance = 0;

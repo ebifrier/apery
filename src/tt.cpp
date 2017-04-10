@@ -52,7 +52,7 @@ TTEntry* TranspositionTable::probe(const Key posKey, bool& found) const {
         if (!tte[i].key() || tte[i].key() == key16) {
             if (tte[i].generation() != generation() && tte[i].key())
                 tte[i].genBound8_ = generation() | tte[i].bound();
-            found = static_cast<bool>(tte[i].key());
+            found = static_cast<bool>(tte[i].key() != 0);
             return &tte[i];
         }
     }

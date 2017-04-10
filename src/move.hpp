@@ -27,6 +27,12 @@
 #include "piece.hpp"
 #include "position.hpp"
 
+#if defined _MSC_VER
+// 複数のコンストラクタ、代入演算子があるという警告を消す。
+#pragma warning(push)
+#pragma warning(disable : 4521 4522)
+#endif
+
 // xxxxxxxx xxxxxxxx xxxxxxxx x1111111  移動先
 // xxxxxxxx xxxxxxxx xx111111 1xxxxxxx  移動元。駒打ちの際には、PieceType + SquareNum - 1
 // xxxxxxxx xxxxxxxx x1xxxxxx xxxxxxxx  1 なら成り
@@ -64,7 +70,7 @@ public:
     // 取った駒の種類
     PieceType cap() const { return static_cast<PieceType>((value() >> 20) & 0xf); }
     // 成るかどうか
-    u32 isPromotion() const { return value() & PromoteFlag; }
+    bool isPromotion() const { return ((value() & PromoteFlag) != 0); }
     // 移動する駒の種類
     PieceType pieceTypeFrom() const { return static_cast<PieceType>((value() >> 16) & 0xf); }
     // 移動した後の駒の種類
@@ -231,5 +237,9 @@ inline Move move16toMove(const Move move, const Position& pos) {
     const PieceType ptFrom = pieceToPieceType(pos.piece(from));
     return move | pieceType2Move(ptFrom) | capturedPieceType2Move(move.to(), pos);
 }
+
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // #ifndef APERY_MOVE_HPP

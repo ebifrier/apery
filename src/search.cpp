@@ -1395,7 +1395,7 @@ void MainThread::search() {
 
     SYNCCOUT << "info string book_ply " << book_ply << SYNCENDL;
     if (options["OwnBook"] && pos.gamePly() <= book_ply) {
-        const std::tuple<Move, Score> bookMoveScore = book.probe(pos, options["Book_File"], options["Best_Book_Move"]);
+        const std::tuple<Move, Score> bookMoveScore = book.probe(pos, options["Book_File"], options["Best_Book_Move"] != 0);
         if (std::get<0>(bookMoveScore) && std::find(rootMoves.begin(),
                                                     rootMoves.end(),
                                                     std::get<0>(bookMoveScore)) != rootMoves.end())
