@@ -77,7 +77,11 @@ struct GodwhaleIO
         // 接続できるまでループを回す
         while (sockstream.connect(host, port) == nullptr) {
             std::cout << "retry..." << std::endl;
+#if defined WIN32 || defined _WIN32 || defined __WIN32__
             _sleep(10 * 1000);
+#else
+            sleep(10);
+#endif
         }
 
         std::cout << "succeeded to connect" << std::endl;
@@ -96,8 +100,8 @@ struct GodwhaleIO
 
 private:
     boost::asio::asio_socket_streambuf<boost::asio::ip::tcp> sockstream;
-    std::streambuf *coutbuf, *cinbuf;
-    Tie in, out;   // 標準入力とファイル、標準出力とファイルのひも付け
+    std::streambuf *cinbuf, *coutbuf;
+    Tie in, out; // 標準入力とファイル、標準出力とファイルのひも付け
 };
 
 

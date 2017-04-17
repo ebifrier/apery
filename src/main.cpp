@@ -56,7 +56,7 @@ int main() {
     return 0;
 }
 
-#else
+#elif defined GODWHALE_CLUSTER_SLAVE
 static void validateLoginName(const std::string name) {
     if (name.empty()) {
         std::cerr << "The Login_Name is empty !" << std::endl;
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     if (s != nullptr) s->threads.exit();
 }
 
-/*#else
+#else
 // 将棋を指すソフト
 int main(int argc, char* argv[]) {
     initTable();
@@ -121,6 +121,6 @@ int main(int argc, char* argv[]) {
     s->init();
     s->doUSICommandLoop(argc, argv);
     s->threads.exit();
-}*/
+}
 
 #endif
