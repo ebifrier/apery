@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_TOOLCHAIN_FILE=./mingw.cmake .
+
