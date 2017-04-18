@@ -97,7 +97,7 @@ void OptionsMap::init(Searcher* s, int threadCount/*=-1*/) {
     (*this)["Book_File"]                   = USIOption("book/20150503/book.bin");
     (*this)["Eval_Dir"]                    = USIOption("20161007");
     (*this)["Best_Book_Move"]              = USIOption(false);
-    (*this)["OwnBook"]                     = USIOption(true);
+    (*this)["OwnBook"]                     = USIOption(false);
     (*this)["Min_Book_Ply"]                = USIOption(SHRT_MAX, 0, SHRT_MAX);
     (*this)["Max_Book_Ply"]                = USIOption(SHRT_MAX, 0, SHRT_MAX);
     (*this)["Min_Book_Score"]              = USIOption(-180, -ScoreInfinite, ScoreInfinite);
@@ -887,7 +887,14 @@ Move csaToMoveDebug(const Position& pos, const std::string& moveStr) {
 #endif
 Move usiToMove(const Position& pos, const std::string& moveStr) {
     const Move move = usiToMoveBody(pos, moveStr);
-    assert(move == usiToMoveDebug(pos, moveStr));
+#if !defined NDEBUG
+    const Move dbg = usiToMoveDebug(pos, moveStr);
+    if (move != dbg) {
+        SYNCCOUT << "usiToMove error: " << move.toKIF() << " isn't "
+                 << dbg.toKIF() << "\n"
+                 << pos.toCSA() << SYNCENDL;
+    }
+#endif
     return move;
 }
 
