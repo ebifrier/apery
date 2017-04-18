@@ -91,7 +91,7 @@ inline int kppIndexBegin(const int i) {
 }
 inline bool kppIndexIsBlack(const int i) {
     // f_xxx と e_xxx が交互に配列に格納されているので、インデックスが偶数の時は Black
-    return !((std::upper_bound(std::begin(KPPIndexArray), std::end(KPPIndexArray), i) - 1) - std::begin(KPPIndexArray) & 1);
+    return !(((std::upper_bound(std::begin(KPPIndexArray), std::end(KPPIndexArray), i) - 1) - std::begin(KPPIndexArray)) & 1);
 }
 inline int kppBlackIndexToWhiteBegin(const int i) {
     assert(kppIndexIsBlack(i));
@@ -893,15 +893,15 @@ template <typename KPPType, typename KKPType, typename KKType> struct EvaluatorB
                 }
             }
             const File kfile0 = makeFile(ksq0);
-            const Rank krank0 = makeRank(ksq0);
             const File kfile1 = makeFile(ksq1);
-            const Rank krank1 = makeRank(ksq1);
 #if defined EVAL_PHASE3 || defined EVAL_ONLINE
             ret[retIdx++] = std::make_pair(sign*(&kks.kk[ksq0][ksq1] - oneArrayKK(0)), MaxWeight());
 #endif
 #if defined EVAL_ONLINE
 #else
 #if defined EVAL_PHASE2
+            const Rank krank0 = makeRank(ksq0);
+            const Rank krank1 = makeRank(ksq1);
             ret[retIdx++] = std::make_pair(sign*(&kks.r_kk[R_Mid + kfile0 - kfile1][R_Mid + krank0 - krank1] - oneArrayKK(0)), MaxWeight());
 #endif
 #endif

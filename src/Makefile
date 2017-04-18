@@ -1,11 +1,13 @@
 COMPILER = g++
 #COMPILER = mpicxx
-CFLAGS   = -std=c++11 -fno-exceptions -fno-rtti -Wextra -Ofast -MMD -MP -fopenmp
+CFLAGS   = -std=c++11 -fno-rtti -Wall -Wextra -Ofast -MMD -MP -fopenmp \
+	   -DGODWHALE_CLUSTER_SLAVE
+#CFLAGS   = -std=c++11 -fno-exceptions -fno-rtti -Wextra -Ofast -MMD -MP -fopenmp
 #CFLAGS   += -march=native # make publish の時はここをコメントアウトする必要がある。
-LDFLAGS  = -lpthread #-lboost_mpi -lboost_serialization
+LDFLAGS  = -lpthread -lboost_system #-lboost_mpi -lboost_serialization
 LIBS     =
 INCLUDE  = #-I../include
-TARGET   = apery
+TARGET   = godwhale_child
 TARGET_BMI2  = $(TARGET)_bmi2
 TARGET_SSE42 = $(TARGET)_sse42
 TARGET_SSE41 = $(TARGET)_sse41
@@ -21,7 +23,7 @@ endif
 SOURCES  = main.cpp bitboard.cpp init.cpp mt64bit.cpp position.cpp evalList.cpp \
            move.cpp movePicker.cpp square.cpp usi.cpp generateMoves.cpp evaluate.cpp \
            search.cpp hand.cpp tt.cpp timeManager.cpp book.cpp benchmark.cpp \
-           thread.cpp common.cpp pieceScore.cpp
+           thread.cpp common.cpp pieceScore.cpp godwhaleIo.cpp
 OBJECTS  = $(addprefix $(OBJDIR)/, $(SOURCES:.cpp=.o))
 DEPENDS  = $(OBJECTS:.o=.d)
 
