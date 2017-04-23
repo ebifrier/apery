@@ -377,6 +377,35 @@ namespace {
     }
 }
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+#include "crc32.hpp"
+
+bool Evaluator::validateCheckSum(const std::string& dirName) const {
+    std::string filepath;
+    unsigned int hash;
+
+    filepath = addSlashIfNone(dirName) + "KPP_synthesized.bin";
+    hash = crc32_file(filepath.c_str());
+    if (hash != 0x981780b7) {
+        return false;
+    }
+
+    filepath = addSlashIfNone(dirName) + "KKP_synthesized.bin";
+    hash = crc32_file(filepath.c_str());
+    if (hash != 0x2bbdee01) {
+        return false;
+    }
+
+    filepath = addSlashIfNone(dirName) + "KK_synthesized.bin";
+    hash = crc32_file(filepath.c_str());
+    if (hash != 0xb5c36187) {
+        return false;
+    }
+
+    return true;
+}
+#endif
+
 bool Evaluator::readSynthesizedKPP(const std::string& dirName) {
 #if !defined SHARED_KPP
     {
@@ -392,8 +421,8 @@ bool Evaluator::readSynthesizedKPP(const std::string& dirName) {
     MappedFile = ipc::file_mapping(binFileName.c_str(), ipc::read_only);
     MappedRegion = ipc::mapped_region(MappedFile, ipc::read_only);
     KPP = (KPPEntry *)MappedRegion.get_address();
-    return true;
 #endif
+    return true;
 }
 
 // todo: 無名名前空間に入れる。

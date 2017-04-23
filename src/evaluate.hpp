@@ -1020,6 +1020,10 @@ struct Evaluator : public EvaluatorBase<KPPType, KKPType, KKType> {
 #endif
     }
 
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+    bool validateCheckSum(const std::string& dirName) const;
+#endif
+
     void init(const std::string& dirName, const bool Synthesized, const bool readBase = true) {
         // 合成された評価関数バイナリがあればそちらを使う。
         if (Synthesized) {

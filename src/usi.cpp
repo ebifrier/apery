@@ -1112,7 +1112,14 @@ void Searcher::doUSICommandLoop(int argc, char* argv[]) {
             if (!evalTableIsRead) {
                 // 一時オブジェクトを生成して Evaluator::init() を呼んだ直後にオブジェクトを破棄する。
                 // 評価関数の次元下げをしたデータを格納する分のメモリが無駄な為、
-                std::unique_ptr<Evaluator>(new Evaluator)->init(options["Eval_Dir"], true);
+                std::unique_ptr<Evaluator> e(new Evaluator);
+#if defined GODWHALE_CLUSTER_MASTER || defined GODWHALE_CLUSTER_SLAVE
+                if (IsGodwhaleMode && !e->validateCheckSum(options["Eval_Dir"])) {
+                    SYNCCOUT << "fatal error: the checksum of the evaluation file isn't valid."
+                                " please download the new one." << SYNCENDL;
+                }
+#endif
+                e->init(options["Eval_Dir"], true);
                 evalTableIsRead = true;
             }
             SYNCCOUT << "readyok" << SYNCENDL;
