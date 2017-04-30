@@ -1,7 +1,3 @@
 CMakeFiles/
 bin/
 obj/
-
-Makefile
-CMakeCache.txt
-*.cmake
