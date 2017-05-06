@@ -1,12 +1,11 @@
 COMPILER = g++
-#COMPILER = mpicxx
-CFLAGS   = -std=c++11 -fno-rtti -Wall -Wextra -Ofast -MMD -MP -fopenmp \
+CFLAGS   = -std=c++11 -fno-rtti -Wall -Wextra -Ofast -MMD -MP \
 	   -DGODWHALE_CLUSTER_SLAVE
 #CFLAGS   = -std=c++11 -fno-exceptions -fno-rtti -Wextra -Ofast -MMD -MP -fopenmp
-#CFLAGS   += -march=native # make publish の時はここをコメントアウトする必要がある。
-LDFLAGS  = -lpthread -lboost_system #-lboost_mpi -lboost_serialization
+CFLAGS   += -march=native # make publish の時はここをコメントアウトする必要がある。
+LDFLAGS  = -L/usr/local/lib -lpthread -lboost_system
 LIBS     =
-INCLUDE  = #-I../include
+INCLUDE  = -I/usr/local/include
 TARGET   = godwhale_child
 TARGET_BMI2  = $(TARGET)_bmi2
 TARGET_SSE42 = $(TARGET)_sse42
